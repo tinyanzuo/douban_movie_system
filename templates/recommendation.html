@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推荐引擎 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 15px; padding: 30px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h2 { margin-bottom: 20px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; }
+        .btn-group { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .btn-warning { background: #ecc94b; color: #744210; }
+        .result-area { background: #f7fafc; border-radius: 10px; padding: 20px; min-height: 400px; }
+        .movie-card { border-bottom: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; transition: all 0.3s; }
+        .movie-card:hover { background: #f7fafc; transform: translateX(5px); }
+        .movie-title { font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 8px; }
+        .movie-rating { color: #f6ad55; margin-bottom: 8px; }
+        .movie-score { display: inline-block; background: #48bb78; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 10px; }
+        .movie-desc { color: #666; font-size: 14px; line-height: 1.5; }
+        .movie-meta { color: #999; font-size: 12px; margin-top: 8px; }
+        .model-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 15px; }
+        .loading { text-align: center; padding: 50px; color: #999; }
+        @media (max-width: 768px) { .btn { width: 100%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/data_collection">数据采集</a>
+                <a href="/data_analysis">数据分析</a>
+                <a href="/movie_analysis">电影分析</a>
+                <a href="/recommendation" class="active">推荐引擎</a>
+                <a href="/ai_assistant">AI助手</a>
+                <a href="/social">社交互动</a>
+                <a href="/user">用户系统</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="card">
+            <div class="model-badge">🧠 神经网络推荐引擎 | 协同过滤 + 内容特征 + MLP</div>
+            <h2>🎯 智能电影推荐</h2>
+            <p style="color: #666; margin-bottom: 20px;">基于您的观影历史和评分，结合电影类型、导演、演员等特征，通过神经网络模型计算匹配度，为您推荐最合适的电影。</p>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="getRecommendation('neural')">🧠 神经网络推荐 (Top-5)</button>
+                <button class="btn btn-success" onclick="trainModel()">🎯 重新训练推荐模型</button>
+                <button class="btn btn-info" onclick="getRecommendation('hybrid')">🎲 混合推荐</button>
+                <button class="btn btn-warning" onclick="getRecommendation('emotion')">😊 情绪感知推荐</button>
+            </div>
+            
+            <div id="recommend-result" class="result-area">
+                <div style="text-align: center; color: #999; padding: 50px;">
+                    点击上方按钮获取个性化推荐<br>
+                    🤖 神经网络推荐会根据您的观影记录智能分析
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>💡 推荐算法说明</h2>
+            <div style="color: #666; line-height: 1.8;">
+                <p><strong>🧠 神经网络推荐 (协同过滤 + 内容特征)</strong><br>
+                使用多层感知机(MLP)神经网络模型，结合用户历史评分、电影类型、导演、年份等特征，计算用户对未观看电影的预测评分，推荐Top-N电影。</p>
+                <p><strong>🎲 混合推荐</strong><br>
+                结合内容过滤和协同过滤，综合推荐热门高分电影，适合新用户。</p>
+                <p><strong>😊 情绪感知推荐</strong><br>
+                根据心情推荐治愈系、励志系等不同类型的电影。</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentUser = 'user_001';
+        
+        // 获取用户信息
+        function getUserInfo() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    currentUser = data.username;
+                });
+        }
+        
+        // 获取推荐
+        function getRecommendation(type) {
+            const resultDiv = document.getElementById('recommend-result');
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在计算推荐结果...<br>🤖 神经网络模型正在分析您的观影偏好</div>';
+            
+            if (type === 'neural') {
+                // 神经网络推荐
+                fetch('/api/recommend', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: currentUser, top_n: 5})
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        let html = `<div style="margin-bottom: 15px; padding: 10px; background: #e6fffa; border-radius: 8px;">
+                                        🤖 推荐方法: ${data.method}<br>
+                                        👤 用户: ${data.user_id}
+                                    </div>`;
+                        
+                        data.recommendations.forEach((movie, i) => {
+                            html += `
+                                <div class="movie-card">
+                                    <div class="movie-title">
+                                        ${i+1}. 《${movie.title}》
+                                        <span class="movie-score">推荐分: ${movie.score}</span>
+                                    </div>
+                                    <div class="movie-rating">⭐ ${movie.rating}分</div>
+                                    <div class="movie-desc">${movie.description}</div>
+                                    <div class="movie-meta">
+                                        🎬 ${movie.director} | 🎭 ${movie.genre} | 📅 ${movie.year}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = '<div style="text-align: center; color: #f56565;">❌ 获取推荐失败，请稍后重试</div>';
+                    }
+                })
+                .catch(err => {
+                    resultDiv.innerHTML = `<div style="text-align: center; color: #f56565;">❌ 请求失败: ${err.message}</div>`;
+                });
+            } else if (type === 'hybrid') {
+                // 混合推荐（基于评分的降级方案）
+                fetch('/api/recommend', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: currentUser, top_n: 5})
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        let html = `<div style="margin-bottom: 15px; padding: 10px; background: #e6fffa; border-radius: 8px;">
+                                        🎲 推荐方法: ${data.method}<br>
+                                        👤 用户: ${data.user_id}
+                                    </div>`;
+                        
+                        data.recommendations.forEach((movie, i) => {
+                            html += `
+                                <div class="movie-card">
+                                    <div class="movie-title">
+                                        ${i+1}. 《${movie.title}》
+                                        <span class="movie-score">评分: ${movie.rating}</span>
+                                    </div>
+                                    <div class="movie-rating">⭐ ${movie.rating}分</div>
+                                    <div class="movie-desc">${movie.description}</div>
+                                    <div class="movie-meta">
+                                        🎬 ${movie.director} | 🎭 ${movie.genre} | 📅 ${movie.year}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = '<div style="text-align: center; color: #f56565;">❌ 获取推荐失败</div>';
+                    }
+                });
+            } else if (type === 'emotion') {
+                // 情绪感知推荐
+                resultDiv.innerHTML = `
+                    <div class="movie-card">
+                        <div class="movie-title">😊 治愈系推荐</div>
+                        <div class="movie-desc">海蒂和爷爷、小森林、入殓师、夏目友人帐、龙猫</div>
+                        <div class="movie-meta">适合想要放松心情、寻求温暖的时刻</div>
+                    </div>
+                    <div class="movie-card">
+                        <div class="movie-title">🔥 励志系推荐</div>
+                        <div class="movie-desc">当幸福来敲门、阿甘正传、摔跤吧爸爸、肖申克的救赎、放牛班的春天</div>
+                        <div class="movie-meta">适合需要动力、想要激励自己的时刻</div>
+                    </div>
+                    <div class="movie-card">
+                        <div class="movie-title">🚀 科幻系推荐</div>
+                        <div class="movie-desc">星际穿越、盗梦空间、2001太空漫游、银翼杀手、黑客帝国</div>
+                        <div class="movie-meta">适合喜欢思考、探索未知的时刻</div>
+                    </div>
+                    <div class="movie-card">
+                        <div class="movie-title">❤️ 爱情系推荐</div>
+                        <div class="movie-desc">怦然心动、泰坦尼克号、你的名字、情书、真爱至上</div>
+                        <div class="movie-meta">适合感受浪漫、温暖爱情的时刻</div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 训练推荐模型
+        function trainModel() {
+            const resultDiv = document.getElementById('recommend-result');
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在训练神经网络推荐模型...<br>这可能需要几分钟时间，请耐心等待</div>';
+            
+            fetch('/api/train_recommender', {method: 'POST'})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        resultDiv.innerHTML = `<div style="text-align: center; padding: 50px; color: #48bb78;">
+                                                    ✅ ${data.message}<br><br>
+                                                    🎯 模型已更新，现在可以获得更精准的推荐！
+                                                </div>`;
+                        setTimeout(() => {
+                            getRecommendation('neural');
+                        }, 2000);
+                    } else {
+                        resultDiv.innerHTML = `<div style="text-align: center; color: #f56565;">
+                                                    ❌ 训练失败: ${data.message || data.error}<br>
+                                                    💡 提示: 需要至少5条观影记录才能训练推荐模型
+                                                </div>`;
+                    }
+                })
+                .catch(err => {
+                    resultDiv.innerHTML = `<div style="text-align: center; color: #f56565;">❌ 请求失败: ${err.message}</div>`;
+                });
+        }
+        
+        // 页面加载时获取用户信息
+        getUserInfo();
+    </script>
+</body>
+</html>

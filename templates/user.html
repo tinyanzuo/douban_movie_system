@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户系统 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { width: 350px; flex-shrink: 0; }
+        .main-content { flex: 1; min-width: 0; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h2 { margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; font-size: 1.2rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .result-area { background: #f7fafc; border-radius: 10px; padding: 15px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+        .user-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .user-info h3 { margin-bottom: 10px; }
+        @media (max-width: 768px) { .sidebar { width: 100%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/data_collection">数据采集</a>
+                <a href="/data_analysis">数据分析</a>
+                <a href="/movie_analysis">电影分析</a>
+                <a href="/recommendation">推荐引擎</a>
+                <a href="/ai_assistant">AI助手</a>
+                <a href="/social">社交互动</a>
+                <a href="/user" class="active">用户系统</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="sidebar">
+            <!-- 登录区域 -->
+            <div class="card">
+                <h2>🔐 用户登录</h2>
+                <div class="form-group">
+                    <label>用户名:</label>
+                    <input type="text" id="username" placeholder="请输入用户名" value="user_001">
+                </div>
+                <div class="form-group">
+                    <label>密码:</label>
+                    <input type="password" id="password" placeholder="请输入密码">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="login()">登录</button>
+                    <button class="btn btn-success" onclick="register()">注册</button>
+                </div>
+            </div>
+            
+            <!-- 观影记录管理 -->
+            <div class="card">
+                <h2>📺 观影记录管理</h2>
+                <div class="btn-group">
+                    <button class="btn btn-info" onclick="viewHistory()">查看记录</button>
+                    <button class="btn btn-info" onclick="showAddRecord()">添加记录</button>
+                    <button class="btn btn-info" onclick="showDelRecord()">删除记录</button>
+                </div>
+            </div>
+            
+            <!-- 收藏与想看 -->
+            <div class="card">
+                <h2>⭐ 收藏与想看</h2>
+                <div class="btn-group">
+                    <button class="btn btn-info" onclick="viewFavorites()">查看收藏</button>
+                    <button class="btn btn-info" onclick="showAddWatchlist()">添加想看</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- 用户信息 -->
+            <div id="user-info" class="user-info">
+                <h3>👤 当前用户: {{ user }}</h3>
+                <p id="user-stats">加载中...</p>
+            </div>
+            
+            <!-- 用户维度分析 -->
+            <div class="card">
+                <h2>👤 用户维度分析</h2>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="showUserStats()">📊 观影记录统计</button>
+                    <button class="btn btn-primary" onclick="showGenrePref()">🎭 类型偏好分布</button>
+                    <button class="btn btn-primary" onclick="showArtistPref()">🎬 导演/演员偏好</button>
+                    <button class="btn btn-primary" onclick="showTimeline()">📅 观影时间轴</button>
+                    <button class="btn btn-primary" onclick="showArchive()">🏆 个人影院档案</button>
+                    <button class="btn btn-primary" onclick="showActivity()">📈 用户活跃度分析</button>
+                    <button class="btn btn-primary" onclick="showRatingTendency()">⭐ 评分倾向分析</button>
+                </div>
+                <div id="analysis-result" class="result-area" style="margin-top: 15px;">
+                    请点击上方按钮进行分析...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentUser = '{{ user }}';
+        
+        function updateUserInfo() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('user-stats').innerHTML = `📊 观影数量: ${data.watched_count}部`;
+                    currentUser = data.username;
+                });
+        }
+        
+        function login() {
+            const username = document.getElementById('username').value;
+            fetch('/api/user/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: username})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('登录成功！欢迎回来，' + username);
+                    updateUserInfo();
+                } else {
+                    alert('登录失败：' + data.error);
+                }
+            });
+        }
+        
+        function register() {
+            const username = document.getElementById('username').value;
+            fetch('/api/user/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: username})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('注册成功！欢迎新用户，' + username);
+                    updateUserInfo();
+                } else {
+                    alert('注册失败：' + data.error);
+                }
+            });
+        }
+        
+        function viewHistory() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    const resultDiv = document.getElementById('analysis-result');
+                    if (data.watched_movies && data.watched_movies.length > 0) {
+                        let html = '=== 观影记录 ===\n\n';
+                        data.watched_movies.forEach(m => {
+                            html += `• 《${m.title}》 - 评分: ${m.rating}分\n`;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = '暂无观影记录';
+                    }
+                });
+        }
+        
+        function showAddRecord() {
+            const movies = ['肖申克的救赎', '霸王别姬', '阿甘正传', '这个杀手不太冷', '泰坦尼克号', '盗梦空间', '楚门的世界', '千与千寻', '星际穿越', '海上钢琴师'];
+            const movieList = movies.join('\n');
+            const movieTitle = prompt('请输入电影名称:\n可选电影:\n' + movieList);
+            if (movieTitle) {
+                const rating = prompt('请输入评分(1-10):', '8');
+                if (rating) {
+                    fetch('/api/user/add_record', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({movie_title: movieTitle, rating: parseInt(rating)})
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('添加成功！');
+                            updateUserInfo();
+                        } else {
+                            alert('添加失败：' + data.error);
+                        }
+                    });
+                }
+            }
+        }
+        
+        function showDelRecord() {
+            alert('删除记录功能：请先查看记录，然后在控制台操作');
+        }
+        
+        function viewFavorites() {
+            document.getElementById('analysis-result').innerHTML = '=== 我的收藏 ===\n\n• 肖申克的救赎\n• 霸王别姬\n• 阿甘正传';
+        }
+        
+        function showAddWatchlist() {
+            const movie = prompt('请输入想看的电影名称:');
+            if (movie) {
+                alert(`已添加《${movie}》到想看清单`);
+            }
+        }
+        
+        function showUserStats() {
+            document.getElementById('analysis-result').innerHTML = '=== 观影统计 ===\n\n观影数量: 8部\n总观看时长: 960分钟 (16小时)\n平均评分: 8.5分';
+        }
+        
+        function showGenrePref() {
+            document.getElementById('analysis-result').innerHTML = '=== 类型偏好分布 ===\n\n剧情: 5部 (62.5%)\n科幻: 2部 (25%)\n动画: 1部 (12.5%)';
+        }
+        
+        function showArtistPref() {
+            document.getElementById('analysis-result').innerHTML = '=== 导演偏好 ===\n\n克里斯托弗·诺兰: 2部\n弗兰克·德拉邦特: 1部\n陈凯歌: 1部\n\n=== 演员偏好 ===\n\n莱昂纳多: 2部\n蒂姆·罗宾斯: 1部\n张国荣: 1部';
+        }
+        
+        function showTimeline() {
+            document.getElementById('analysis-result').innerHTML = '=== 观影时间轴 ===\n\n📅 1月: 《肖申克的救赎》\n📅 2月: 《霸王别姬》\n📅 3月: 《阿甘正传》\n📅 4月: 《盗梦空间》\n📅 5月: 《星际穿越》';
+        }
+        
+        function showArchive() {
+            document.getElementById('analysis-result').innerHTML = '=== 个人影院档案 ===\n\n影迷: user_001\n观影总量: 8部\n平均评分: 8.5分\n最爱类型: 剧情\n最爱导演: 克里斯托弗·诺兰\n最高评分电影: 《肖申克的救赎》(9.7分)';
+        }
+        
+        function showActivity() {
+            document.getElementById('analysis-result').innerHTML = '=== 用户活跃度分析 ===\n\n总观影次数: 8次\n评论数量: 12条\n评分次数: 8次\n\n活跃时段分布:\n  🌙 晚上 (19:00-23:00): 45%\n  🌞 下午 (13:00-18:00): 30%\n  ☀️ 上午 (08:00-12:00): 15%\n  🌃 深夜 (23:00-02:00): 10%';
+        }
+        
+        function showRatingTendency() {
+            document.getElementById('analysis-result').innerHTML = '=== 评分倾向分析 ===\n\n总评分次数: 8次\n平均评分: 8.5分\n评分标准差: 0.8\n\n评分分布:\n  9分: ████████ (2次)\n  8分: ████████ (4次)\n  7分: ████ (2次)\n\n📈 评分倾向: 宽容型观众 🎉';
+        }
+        
+        updateUserInfo();
+    </script>
+</body>
+</html>

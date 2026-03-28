@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电影分析 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { width: 320px; flex-shrink: 0; }
+        .main-content { flex: 1; min-width: 0; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h2 { margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; font-size: 1.2rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: #667eea; color: white; width: 100%; }
+        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
+        .result-area { background: #f7fafc; border-radius: 10px; padding: 15px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+        .history-list { list-style: none; }
+        .history-list li { padding: 8px; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: background 0.2s; }
+        .history-list li:hover { background: #f7fafc; }
+        .status { padding: 8px; border-radius: 8px; margin-top: 10px; font-size: 12px; }
+        .status-info { background: #bee3f8; color: #2c5282; }
+        .status-success { background: #c6f6d5; color: #22543d; }
+        .status-error { background: #fed7d7; color: #9b2c2c; }
+        .status-warning { background: #feebc8; color: #744210; }
+        .suggestions-list { margin-top: 10px; padding: 10px; background: #fef5e7; border-radius: 8px; }
+        .suggestion-item { display: inline-block; padding: 5px 12px; margin: 5px; background: #667eea; color: white; border-radius: 20px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
+        .suggestion-item:hover { background: #5a67d8; transform: scale(1.05); }
+        .data-source-badge { display: inline-block; padding: 2px 8px; background: #e2e8f0; border-radius: 12px; font-size: 11px; margin-left: 10px; }
+        @media (max-width: 768px) { .sidebar { width: 100%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/data_collection">数据采集</a>
+                <a href="/data_analysis">数据分析</a>
+                <a href="/movie_analysis" class="active">电影分析</a>
+                <a href="/recommendation">推荐引擎</a>
+                <a href="/ai_assistant">AI助手</a>
+                <a href="/social">社交互动</a>
+                <a href="/user">用户系统</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="sidebar">
+            <!-- 搜索区域 -->
+            <div class="card">
+                <h2>🔍 搜索电影</h2>
+                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                    💡 支持多数据源搜索：本地缓存 → 豆瓣 → 猫眼
+                </p>
+                <div class="form-group">
+                    <label>输入电影名称:</label>
+                    <input type="text" id="search-movie" placeholder="例如: 让子弹飞、肖申克的救赎" value="让子弹飞">
+                </div>
+                <button class="btn btn-primary" onclick="searchMovie()">🔍 搜索电影</button>
+                <div id="search-status" class="status status-info" style="margin-top: 10px;">⚡ 等待搜索</div>
+                <div id="suggestions-area" style="display: none;"></div>
+            </div>
+            
+            <!-- 手动输入电影ID -->
+            <div class="card">
+                <h2>📝 手动输入</h2>
+                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                    如果搜索不到，可以手动输入电影信息
+                </p>
+                <div class="form-group">
+                    <label>电影名称:</label>
+                    <input type="text" id="manual-title" placeholder="电影名称">
+                </div>
+                <div class="form-group">
+                    <label>导演:</label>
+                    <input type="text" id="manual-director" placeholder="导演">
+                </div>
+                <div class="form-group">
+                    <label>演员:</label>
+                    <input type="text" id="manual-actors" placeholder="演员，用逗号分隔">
+                </div>
+                <div class="form-group">
+                    <label>年份:</label>
+                    <input type="text" id="manual-year" placeholder="年份">
+                </div>
+                <div class="form-group">
+                    <label>类型:</label>
+                    <input type="text" id="manual-genre" placeholder="类型">
+                </div>
+                <button class="btn btn-primary" onclick="analyzeManualMovie()">📊 分析手动输入电影</button>
+            </div>
+            
+            <!-- 内置电影 -->
+            <div class="card">
+                <h2>📚 系统内置电影</h2>
+                <div class="form-group">
+                    <select id="builtin-movie" style="width: 100%; padding: 10px;">
+                        {% for movie in movies %}
+                        <option value="{{ movie.title }}">{{ movie.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="analyzeBuiltin()">分析内置电影</button>
+            </div>
+            
+            <!-- 搜索历史 -->
+            <div class="card">
+                <h2>📜 搜索历史</h2>
+                <ul id="history-list" class="history-list"></ul>
+                <button class="btn" style="background: #e2e8f0; margin-top: 10px; width: 100%;" onclick="clearHistory()">清空历史</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- 电影基本信息 -->
+            <div class="card">
+                <h2>📽️ 电影详细信息</h2>
+                <div id="movie-info" class="result-area">请搜索或选择电影进行分析...</div>
+            </div>
+            
+            <!-- 类型分析 -->
+            <div class="card">
+                <h2>🎭 类型分析</h2>
+                <div id="genre-analysis" class="result-area"></div>
+            </div>
+            
+            <!-- 导演/演员影响力分析 -->
+            <div class="card">
+                <h2>⭐ 导演/演员影响力分析</h2>
+                <div id="influence-analysis" class="result-area"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let searchHistory = JSON.parse(localStorage.getItem('movieSearchHistory') || '[]');
+        
+        function updateHistoryDisplay() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            searchHistory.slice(0, 10).forEach(movie => {
+                const li = document.createElement('li');
+                li.textContent = movie;
+                li.onclick = () => {
+                    document.getElementById('search-movie').value = movie;
+                    searchMovie();
+                };
+                list.appendChild(li);
+            });
+        }
+        
+        function addToHistory(movie) {
+            if (!searchHistory.includes(movie)) {
+                searchHistory.unshift(movie);
+                if (searchHistory.length > 10) searchHistory.pop();
+                localStorage.setItem('movieSearchHistory', JSON.stringify(searchHistory));
+                updateHistoryDisplay();
+            }
+        }
+        
+        function clearHistory() {
+            searchHistory = [];
+            localStorage.setItem('movieSearchHistory', JSON.stringify(searchHistory));
+            updateHistoryDisplay();
+        }
+        
+        function searchMovie() {
+            const movieName = document.getElementById('search-movie').value.trim();
+            if (!movieName) { alert('请输入电影名称'); return; }
+            
+            const statusDiv = document.getElementById('search-status');
+            const suggestionsDiv = document.getElementById('suggestions-area');
+            statusDiv.className = 'status status-info';
+            statusDiv.innerHTML = '⏳ 正在搜索...';
+            suggestionsDiv.style.display = 'none';
+            
+            fetch('/api/search_movie', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({movie_name: movieName})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    addToHistory(data.data.title);
+                    displayMovieInfo(data.data);
+                    statusDiv.className = 'status status-success';
+                    statusDiv.innerHTML = `✅ ${data.message} (来源: ${data.data.source})`;
+                    setTimeout(() => { statusDiv.innerHTML = '⚡ 等待搜索'; }, 5000);
+                } else {
+                    document.getElementById('movie-info').innerHTML = `❌ ${data.message}`;
+                    statusDiv.className = 'status status-error';
+                    statusDiv.innerHTML = `❌ ${data.message}`;
+                    
+                    // 显示建议
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        let suggestionsHtml = '<div class="suggestions-list"><strong>💡 您是不是想找:</strong><br>';
+                        data.suggestions.forEach(sug => {
+                            suggestionsHtml += `<span class="suggestion-item" onclick="selectSuggestion('${sug}')">${sug}</span>`;
+                        });
+                        suggestionsHtml += '</div>';
+                        suggestionsDiv.innerHTML = suggestionsHtml;
+                        suggestionsDiv.style.display = 'block';
+                    }
+                }
+            });
+        }
+        
+        function selectSuggestion(movieName) {
+            document.getElementById('search-movie').value = movieName;
+            searchMovie();
+        }
+        
+        function analyzeBuiltin() {
+            const movieTitle = document.getElementById('builtin-movie').value;
+            addToHistory(movieTitle);
+            
+            // 构建内置电影数据
+            const movieData = {
+                title: movieTitle,
+                director: getDirectorByTitle(movieTitle),
+                actors: getActorsByTitle(movieTitle),
+                year: getYearByTitle(movieTitle),
+                genre: getGenreByTitle(movieTitle),
+                rating: getRatingByTitle(movieTitle),
+                description: getDescriptionByTitle(movieTitle),
+                source: "系统内置"
+            };
+            displayMovieInfo(movieData);
+        }
+        
+        function analyzeManualMovie() {
+            const title = document.getElementById('manual-title').value.trim();
+            const director = document.getElementById('manual-director').value.trim();
+            const actorsStr = document.getElementById('manual-actors').value.trim();
+            const year = document.getElementById('manual-year').value.trim();
+            const genre = document.getElementById('manual-genre').value.trim();
+            
+            if (!title) {
+                alert('请输入电影名称');
+                return;
+            }
+            
+            const movieData = {
+                title: title,
+                director: director || '用户输入',
+                actors: actorsStr ? actorsStr.split(',') : ['用户输入'],
+                year: year || '未知',
+                genre: genre || '未知',
+                rating: '暂无',
+                description: '用户手动输入的电影信息',
+                source: "手动输入"
+            };
+            
+            addToHistory(title);
+            displayMovieInfo(movieData);
+        }
+        
+        function displayMovieInfo(movie) {
+            const infoDiv = document.getElementById('movie-info');
+            infoDiv.innerHTML = `🎬 《${movie.title}》\n\n`;
+            infoDiv.innerHTML += `📅 年份: ${movie.year}\n`;
+            infoDiv.innerHTML += `🎭 类型: ${movie.genre}\n`;
+            infoDiv.innerHTML += `🎬 导演: ${movie.director}\n`;
+            infoDiv.innerHTML += `⭐ 演员: ${Array.isArray(movie.actors) ? movie.actors.join(', ') : movie.actors}\n`;
+            infoDiv.innerHTML += `⭐ 豆瓣评分: ${movie.rating}\n\n`;
+            infoDiv.innerHTML += `📝 简介: ${movie.description}\n\n`;
+            infoDiv.innerHTML += `📊 数据来源: ${movie.source}\n`;
+            
+            // 类型分析
+            displayGenreAnalysis(movie);
+            
+            // 影响力分析
+            displayInfluenceAnalysis(movie);
+        }
+        
+        function displayGenreAnalysis(movie) {
+            const genreDiv = document.getElementById('genre-analysis');
+            const genres = movie.genre.split('/');
+            
+            genreDiv.innerHTML = `🎭 《${movie.title}》类型分析\n\n`;
+            genres.forEach(genre => {
+                genreDiv.innerHTML += `📌 ${genre}类型\n`;
+                genreDiv.innerHTML += `   特点: ${getGenreCharacteristics(genre)}\n\n`;
+            });
+            
+            if (genres.length > 1) {
+                genreDiv.innerHTML += `🔍 类型组合分析:\n`;
+                genreDiv.innerHTML += `   《${movie.title}》融合了${genres.join(' + ')}元素，\n`;
+                genreDiv.innerHTML += `   这种组合丰富了影片的层次，满足了不同观众的需求。\n`;
+            }
+        }
+        
+        function displayInfluenceAnalysis(movie) {
+            const influenceDiv = document.getElementById('influence-analysis');
+            influenceDiv.innerHTML = `⭐ 《${movie.title}》影响力分析\n\n`;
+            
+            influenceDiv.innerHTML += `🎥 导演: ${movie.director}\n`;
+            const directorInfo = getDirectorInfluence(movie.director);
+            if (directorInfo) {
+                influenceDiv.innerHTML += `   影响力评分: ${directorInfo.score}/10\n`;
+                influenceDiv.innerHTML += `   获奖情况: ${directorInfo.awards.join(', ')}\n`;
+                influenceDiv.innerHTML += `   代表作品: ${directorInfo.representative.join(', ')}\n`;
+                if (directorInfo.score >= 9) influenceDiv.innerHTML += `   影响力等级: 🎖️ 大师级导演\n\n`;
+                else if (directorInfo.score >= 8.5) influenceDiv.innerHTML += `   影响力等级: 🏆 顶级导演\n\n`;
+                else influenceDiv.innerHTML += `   影响力等级: ⭐ 优秀导演\n\n`;
+            } else {
+                influenceDiv.innerHTML += `   暂无详细数据\n\n`;
+            }
+            
+            influenceDiv.innerHTML += `🎭 主要演员:\n`;
+            const actors = Array.isArray(movie.actors) ? movie.actors : [movie.actors];
+            actors.forEach(actor => {
+                influenceDiv.innerHTML += `   • ${actor}\n`;
+                const actorInfo = getActorInfluence(actor);
+                if (actorInfo) {
+                    influenceDiv.innerHTML += `       影响力评分: ${actorInfo.score}/10\n`;
+                    influenceDiv.innerHTML += `       获奖情况: ${actorInfo.awards.join(', ')}\n`;
+                    influenceDiv.innerHTML += `       代表作品: ${actorInfo.representative.join(', ')}\n`;
+                    if (actorInfo.score >= 9) influenceDiv.innerHTML += `       影响力等级: 🎖️ 影帝/影后级别\n\n`;
+                    else if (actorInfo.score >= 8.5) influenceDiv.innerHTML += `       影响力等级: 🏆 实力派演员\n\n`;
+                    else influenceDiv.innerHTML += `       影响力等级: ⭐ 优秀演员\n\n`;
+                } else {
+                    influenceDiv.innerHTML += `       暂无详细数据\n\n`;
+                }
+            });
+        }
+        
+        // 辅助函数
+        function getGenreCharacteristics(genre) {
+            const map = {
+                "剧情": "深度、思考、情感",
+                "动作": "刺激、震撼、视觉冲击",
+                "爱情": "浪漫、感人、温馨",
+                "科幻": "想象力、深度、视觉奇观",
+                "悬疑": "烧脑、反转、紧张",
+                "动画": "想象力、治愈、唯美",
+                "奇幻": "想象力、冒险、梦幻",
+                "喜剧": "幽默、轻松、欢乐"
+            };
+            return map[genre] || "经典类型，深受喜爱";
+        }
+        
+        function getDirectorInfluence(director) {
+            const map = {
+                "弗兰克·德拉邦特": {score: 9.2, awards: ["奥斯卡最佳影片提名"], representative: ["肖申克的救赎"]},
+                "陈凯歌": {score: 8.9, awards: ["戛纳金棕榈奖"], representative: ["霸王别姬"]},
+                "罗伯特·泽米吉斯": {score: 8.8, awards: ["奥斯卡最佳导演"], representative: ["阿甘正传"]},
+                "詹姆斯·卡梅隆": {score: 9.0, awards: ["奥斯卡最佳导演"], representative: ["泰坦尼克号"]},
+                "克里斯托弗·诺兰": {score: 9.1, awards: ["奥斯卡最佳导演提名"], representative: ["盗梦空间", "星际穿越"]},
+                "宫崎骏": {score: 9.3, awards: ["奥斯卡终身成就奖"], representative: ["千与千寻"]}
+            };
+            return map[director];
+        }
+        
+        function getActorInfluence(actor) {
+            const map = {
+                "蒂姆·罗宾斯": {score: 8.5, awards: ["奥斯卡最佳男配角"], representative: ["肖申克的救赎"]},
+                "摩根·弗里曼": {score: 9.0, awards: ["奥斯卡最佳男配角"], representative: ["肖申克的救赎"]},
+                "张国荣": {score: 9.2, awards: ["香港金像奖影帝"], representative: ["霸王别姬"]},
+                "汤姆·汉克斯": {score: 9.1, awards: ["奥斯卡影帝"], representative: ["阿甘正传"]},
+                "莱昂纳多": {score: 9.0, awards: ["奥斯卡影帝"], representative: ["泰坦尼克号"]}
+            };
+            return map[actor];
+        }
+        
+        function getDirectorByTitle(title) {
+            const map = {
+                "肖申克的救赎": "弗兰克·德拉邦特",
+                "霸王别姬": "陈凯歌",
+                "阿甘正传": "罗伯特·泽米吉斯",
+                "泰坦尼克号": "詹姆斯·卡梅隆",
+                "盗梦空间": "克里斯托弗·诺兰",
+                "千与千寻": "宫崎骏"
+            };
+            return map[title] || "未知";
+        }
+        
+        function getActorsByTitle(title) {
+            const map = {
+                "肖申克的救赎": ["蒂姆·罗宾斯", "摩根·弗里曼"],
+                "霸王别姬": ["张国荣", "张丰毅", "巩俐"],
+                "阿甘正传": ["汤姆·汉克斯"],
+                "泰坦尼克号": ["莱昂纳多", "凯特·温丝莱特"],
+                "盗梦空间": ["莱昂纳多"],
+                "千与千寻": ["柊瑠美"]
+            };
+            return map[title] || ["未知"];
+        }
+        
+        function getYearByTitle(title) {
+            const map = {
+                "肖申克的救赎": "1994",
+                "霸王别姬": "1993",
+                "阿甘正传": "1994",
+                "泰坦尼克号": "1997",
+                "盗梦空间": "2010",
+                "千与千寻": "2001"
+            };
+            return map[title] || "未知";
+        }
+        
+        function getGenreByTitle(title) {
+            const map = {
+                "肖申克的救赎": "剧情",
+                "霸王别姬": "剧情",
+                "阿甘正传": "剧情",
+                "泰坦尼克号": "爱情/灾难",
+                "盗梦空间": "科幻/悬疑",
+                "千与千寻": "动画/奇幻"
+            };
+            return map[title] || "未知";
+        }
+        
+        function getRatingByTitle(title) {
+            const map = {
+                "肖申克的救赎": "9.7",
+                "霸王别姬": "9.6",
+                "阿甘正传": "9.5",
+                "泰坦尼克号": "9.5",
+                "盗梦空间": "9.4",
+                "千与千寻": "9.4"
+            };
+            return map[title] || "暂无";
+        }
+        
+        function getDescriptionByTitle(title) {
+            const map = {
+                "肖申克的救赎": "希望让人自由",
+                "霸王别姬": "风华绝代",
+                "阿甘正传": "人生就像巧克力",
+                "泰坦尼克号": "永恒的爱情",
+                "盗梦空间": "梦境与现实",
+                "千与千寻": "成长的旅程"
+            };
+            return map[title] || "暂无简介";
+        }
+        
+        updateHistoryDisplay();
+    </script>
+</body>
+</html>

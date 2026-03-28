@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { width: 320px; flex-shrink: 0; }
+        .main-content { flex: 1; min-width: 0; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h2 { margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; font-size: 1.2rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; font-size: 14px; }
+        .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        .btn { padding: 8px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; margin: 5px 0; width: 100%; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .btn-warning { background: #ecc94b; color: #744210; }
+        .result-area { background: #f7fafc; border-radius: 10px; padding: 15px; max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 13px; line-height: 1.6; }
+        .chart-container { text-align: center; margin: 10px 0; }
+        .chart-container img { max-width: 100%; border-radius: 10px; }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
+        .tab-btn { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .tab-btn.active { color: #667eea; border-bottom: 2px solid #667eea; margin-bottom: -2px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f7fafc; font-weight: 600; }
+        .sentiment-positive { color: #48bb78; font-weight: bold; }
+        .sentiment-neutral { color: #ecc94b; font-weight: bold; }
+        .sentiment-negative { color: #f56565; font-weight: bold; }
+        .model-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 10px; }
+        .upload-area { border: 2px dashed #ddd; border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px; }
+        .upload-area input { margin-bottom: 10px; }
+        @media (max-width: 768px) { .sidebar { width: 100%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/data_collection">数据采集</a>
+                <a href="/data_analysis" class="active">数据分析</a>
+                <a href="/movie_analysis">电影分析</a>
+                <a href="/recommendation">推荐引擎</a>
+                <a href="/ai_assistant">AI助手</a>
+                <a href="/social">社交互动</a>
+                <a href="/user">用户系统</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="sidebar">
+            <!-- 模型信息 -->
+            <div class="card">
+                <div class="model-badge">🤖 PyTorch CNN + LSTM 深度学习模型</div>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    🧠 模型架构: CNN(3/4/5窗口) + BiLSTM<br>
+                    📊 训练数据: 豆瓣真实评论<br>
+                    🎯 准确率: 约85-90%
+                </p>
+                <button class="btn btn-warning" onclick="trainModel()">🎯 重新训练模型</button>
+                <div id="train-status" style="font-size: 12px; margin-top: 10px; color: #666;"></div>
+            </div>
+            
+            <!-- 上传区域 -->
+            <div class="card">
+                <h2>📤 上传评论文件</h2>
+                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">支持格式: JSON / CSV / TXT / Excel</p>
+                <p style="font-size: 11px; color: #999; margin-bottom: 10px;">必须包含: 序号、用户、评论内容、评分</p>
+                <div class="upload-area">
+                    <input type="file" id="upload-file" accept=".json,.csv,.txt,.xlsx,.xls">
+                    <input type="text" id="upload-movie-name" placeholder="电影名称" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px;">
+                    <button class="btn btn-success" onclick="uploadFile()" style="margin-top: 10px;">📤 上传并分析</button>
+                </div>
+                <div id="upload-status" style="margin-top: 10px; font-size: 12px; color: #666;">未上传文件</div>
+            </div>
+            
+            <!-- 数据源选择 -->
+            <div class="card">
+                <h2>🎬 选择分析数据源</h2>
+                <div class="form-group">
+                    <label>数据源类型:</label>
+                    <select id="source-type" onchange="changeSourceType()">
+                        <option value="system">📚 系统内置电影</option>
+                        <option value="crawled">🕷️ 爬取的评论数据</option>
+                        <option value="uploaded">📤 上传的评论数据</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>选择数据:</label>
+                    <select id="data-select"></select>
+                </div>
+                <div id="source-info" style="font-size: 12px; color: #666; margin-top: 5px;"></div>
+            </div>
+            
+            <!-- 分析工具 -->
+            <div class="card">
+                <h2>📊 分析工具</h2>
+                <button class="btn btn-primary" onclick="showRatingDist()">📊 评分分布图</button>
+                <button class="btn btn-primary" onclick="showSentiment()">😊 情感分析 (PyTorch)</button>
+                <button class="btn btn-primary" onclick="showTrend()">📈 情感趋势图</button>
+                <button class="btn btn-info" onclick="showSummary()">📝 短评摘要</button>
+                <button class="btn btn-info" onclick="showCredibility()">🎯 评分可信度</button>
+                <button class="btn btn-info" onclick="showEmotion()">💬 情绪词分析</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="card">
+                <!-- 统计分析和表格使用同一个区域，通过不同显示模式切换 -->
+                <div id="stats-area" style="display: block;">
+                    <div id="analysis-result" class="result-area">请选择数据源并点击分析按钮...</div>
+                </div>
+                <div id="table-area" style="display: none;">
+                    <div class="table-container">
+                        <table id="sentiment-table">
+                            <thead>
+                                <tr><th>序号</th><th>用户</th><th>评论内容</th><th>情感</th><th>评分</th><th>时间</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="chart-area" style="display: none;">
+                    <div id="chart-container" class="chart-container">
+                        <img id="chart-image" src="">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentSourceType = 'system';
+        let currentName = '';
+        let allSources = {};
+        let currentReviews = [];
+        
+        // 隐藏所有显示区域
+        function hideAllAreas() {
+            document.getElementById('stats-area').style.display = 'none';
+            document.getElementById('table-area').style.display = 'none';
+            document.getElementById('chart-area').style.display = 'none';
+        }
+        
+        // 显示统计文本区域
+        function showStatsArea() {
+            hideAllAreas();
+            document.getElementById('stats-area').style.display = 'block';
+        }
+        
+        // 显示表格区域
+        function showTableArea() {
+            hideAllAreas();
+            document.getElementById('table-area').style.display = 'block';
+        }
+        
+        // 显示图表区域
+        function showChartArea() {
+            hideAllAreas();
+            document.getElementById('chart-area').style.display = 'block';
+        }
+        
+        // 加载数据源
+        function loadDataSources() {
+            fetch('/api/get_data_sources')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        allSources = data.sources;
+                        changeSourceType();
+                    }
+                });
+        }
+        
+        function changeSourceType() {
+            currentSourceType = document.getElementById('source-type').value;
+            const select = document.getElementById('data-select');
+            select.innerHTML = '';
+            
+            let sources = allSources[currentSourceType] || [];
+            if (sources.length === 0) {
+                select.innerHTML = '<option value="">暂无数据</option>';
+                document.getElementById('source-info').innerHTML = '暂无数据，请先采集或上传评论';
+                return;
+            }
+            
+            sources.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.name;
+                option.text = `${source.name} (${source.count}条评论)`;
+                select.appendChild(option);
+            });
+            
+            if (sources.length > 0) {
+                select.value = sources[0].name;
+                updateSourceInfo(sources[0].name);
+            }
+        }
+        
+        function updateSourceInfo(name) {
+            const sources = allSources[currentSourceType] || [];
+            const source = sources.find(s => s.name === name);
+            if (source) {
+                document.getElementById('source-info').innerHTML = `📊 ${source.count}条评论 | 类型: ${getSourceTypeName(currentSourceType)}`;
+            }
+        }
+        
+        function getSourceTypeName(type) {
+            const names = {'system': '系统内置', 'crawled': '爬取数据', 'uploaded': '上传数据'};
+            return names[type] || type;
+        }
+        
+        function getCurrentData() {
+            currentName = document.getElementById('data-select').value;
+            if (!currentName) {
+                alert('请选择数据源');
+                return null;
+            }
+            return {source_type: currentSourceType, name: currentName};
+        }
+        
+        function trainModel() {
+            const statusDiv = document.getElementById('train-status');
+            statusDiv.innerHTML = '⏳ 正在训练模型，请稍候...';
+            statusDiv.style.color = 'orange';
+            
+            fetch('/api/train_model', {method: 'POST'})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        statusDiv.innerHTML = `✅ ${data.message}`;
+                        statusDiv.style.color = 'green';
+                    } else {
+                        statusDiv.innerHTML = `❌ 训练失败: ${data.error}`;
+                        statusDiv.style.color = 'red';
+                    }
+                    setTimeout(() => { statusDiv.innerHTML = ''; }, 5000);
+                })
+                .catch(err => {
+                    statusDiv.innerHTML = `❌ 请求失败: ${err.message}`;
+                    statusDiv.style.color = 'red';
+                });
+        }
+        
+        function uploadFile() {
+            const file = document.getElementById('upload-file').files[0];
+            const movieName = document.getElementById('upload-movie-name').value.trim();
+            
+            if (!file) { alert('请选择文件'); return; }
+            if (!movieName) { alert('请输入电影名称'); return; }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('movie_name', movieName);
+            
+            document.getElementById('upload-status').innerHTML = '⏳ 正在上传和分析...';
+            document.getElementById('upload-status').style.color = 'orange';
+            
+            fetch('/api/upload_reviews', {method: 'POST', body: formData})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('upload-status').innerHTML = `✅ 已上传 ${data.movie_name} (${data.count}条)`;
+                        document.getElementById('upload-status').style.color = 'green';
+                        loadDataSources();
+                        setTimeout(() => {
+                            document.getElementById('source-type').value = 'uploaded';
+                            changeSourceType();
+                            showSentiment();
+                        }, 500);
+                    } else {
+                        document.getElementById('upload-status').innerHTML = `❌ 上传失败: ${data.error}`;
+                        document.getElementById('upload-status').style.color = 'red';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('upload-status').innerHTML = `❌ 请求失败: ${err.message}`;
+                    document.getElementById('upload-status').style.color = 'red';
+                });
+        }
+        
+        // 评分分布图 - 只显示图表
+        function showRatingDist() {
+            const params = getCurrentData();
+            if (!params) return;
+            
+            fetch('/api/get_rating_dist', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showChartArea();
+                    document.getElementById('chart-image').src = 'data:image/png;base64,' + data.image;
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+        
+        // 情感分析 - 显示统计文本 + 表格
+        function showSentiment() {
+            const params = getCurrentData();
+            if (!params) return;
+            
+            fetch('/api/analyze_sentiment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // 保存评论数据供表格使用
+                    currentReviews = data.reviews;
+                    
+                    // 显示统计文本区域
+                    showStatsArea();
+                    const resultDiv = document.getElementById('analysis-result');
+                    resultDiv.innerHTML = `=== ${data.name} 情感分析 (PyTorch CNN+LSTM) ===\n\n`;
+                    resultDiv.innerHTML += `数据源: ${getSourceTypeName(data.source_type)}\n`;
+                    resultDiv.innerHTML += `总评论数: ${data.total} 条\n\n`;
+                    resultDiv.innerHTML += `😊 正面评价: ${data.positive} 条 (${data.positive_pct.toFixed(1)}%)\n`;
+                    resultDiv.innerHTML += `😐 中性评价: ${data.neutral} 条 (${data.neutral_pct.toFixed(1)}%)\n`;
+                    resultDiv.innerHTML += `😞 负面评价: ${data.negative} 条 (${data.negative_pct.toFixed(1)}%)\n\n`;
+                    
+                    if (data.positive_pct > 60) resultDiv.innerHTML += `📈 情感倾向: 非常积极 🎉\n`;
+                    else if (data.positive_pct > 40) resultDiv.innerHTML += `📈 情感倾向: 积极 👍\n`;
+                    else if (data.negative_pct > 40) resultDiv.innerHTML += `📈 情感倾向: 消极 👎\n`;
+                    else resultDiv.innerHTML += `📈 情感倾向: 中性 😐\n`;
+                    
+                    resultDiv.innerHTML += `\n💡 详细评论请查看下方表格 ↓`;
+                    
+                    // 显示表格区域
+                    showTableArea();
+                    const tbody = document.querySelector('#sentiment-table tbody');
+                    tbody.innerHTML = '';
+                    data.reviews.forEach((review, i) => {
+                        const sentimentClass = review.sentiment === 'positive' ? 'sentiment-positive' : (review.sentiment === 'neutral' ? 'sentiment-neutral' : 'sentiment-negative');
+                        const sentimentText = review.sentiment === 'positive' ? '😊 正面' : (review.sentiment === 'neutral' ? '😐 中性' : '😞 负面');
+                        const row = tbody.insertRow();
+                        row.insertCell(0).innerHTML = i+1;
+                        row.insertCell(1).innerHTML = review.user || '匿名';
+                        row.insertCell(2).innerHTML = review.content.length > 80 ? review.content.substring(0,80)+'...' : review.content;
+                        row.insertCell(3).innerHTML = `<span class="${sentimentClass}">${sentimentText}</span>`;
+                        row.insertCell(4).innerHTML = '⭐'.repeat(review.rating);
+                        row.insertCell(5).innerHTML = review.time || '';
+                    });
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+        
+        // 情感趋势图 - 只显示图表
+        function showTrend() {
+            const params = getCurrentData();
+            if (!params) return;
+            
+            fetch('/api/get_trend_chart', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showChartArea();
+                    document.getElementById('chart-image').src = 'data:image/png;base64,' + data.image;
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+        
+        // 短评摘要 - 只显示统计文本
+        function showSummary() {
+            const params = getCurrentData();
+            if (!params) return;
+            
+            fetch('/api/analyze_sentiment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showStatsArea();
+                    const positive = data.reviews.filter(r => r.sentiment === 'positive');
+                    const negative = data.reviews.filter(r => r.sentiment === 'negative');
+                    
+                    let html = `=== ${data.name} 短评摘要 ===\n\n`;
+                    html += `📝 正面评价 (${positive.length}条):\n`;
+                    positive.slice(0, 5).forEach(p => {
+                        html += `  ✓ ${p.content}\n`;
+                    });
+                    html += `\n📝 负面评价 (${negative.length}条):\n`;
+                    negative.slice(0, 5).forEach(n => {
+                        html += `  ✗ ${n.content}\n`;
+                    });
+                    
+                    document.getElementById('analysis-result').innerHTML = html;
+                }
+            });
+        }
+        
+        // 评分可信度 - 只显示统计文本
+        function showCredibility() {
+            const params = getCurrentData();
+            if (!params) return;
+            
+            fetch('/api/analyze_sentiment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showStatsArea();
+                    const ratings = data.reviews.map(r => r.rating);
+                    const avg = ratings.reduce((a,b) => a+b, 0) / ratings.length;
+                    const std = Math.sqrt(ratings.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / ratings.length);
+                    
+                    let html = `=== ${data.name} 评分可信度分析 ===\n\n`;
+                    html += `平均评分: ${avg.toFixed(2)}\n`;
+                    html += `标准差: ${std.toFixed(2)}\n`;
+                    html += `样本数: ${ratings.length}\n\n`;
+                    html += std < 1 ? '✅ 评分一致性高，可信度良好' : '⚠️ 评分分歧较大，可能存在争议';
+                    
+                    document.getElementById('analysis-result').innerHTML = html;
+                }
+            });
+        }
+        
+        // 情绪词分析 - 只显示统计文本
+        function showEmotion() {
+            const params = getCurrentData();
+            if (!params) return;
+            
+            fetch('/api/analyze_sentiment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showStatsArea();
+                    const emotions = ['感动', '震撼', '经典', '失望', '无聊', '好看', '精彩', '烂片'];
+                    const counts = {};
+                    emotions.forEach(e => counts[e] = 0);
+                    
+                    data.reviews.forEach(r => {
+                        emotions.forEach(e => {
+                            if (r.content.includes(e)) counts[e]++;
+                        });
+                    });
+                    
+                    let html = `=== ${data.name} 情绪词分析 ===\n\n`;
+                    for (let [word, count] of Object.entries(counts)) {
+                        if (count > 0) html += `${word}: ${count}次\n`;
+                    }
+                    
+                    document.getElementById('analysis-result').innerHTML = html;
+                }
+            });
+        }
+        
+        // 页面加载时初始化
+        loadDataSources();
+        
+        // 监听数据源选择变化
+        document.getElementById('data-select').addEventListener('change', function() {
+            updateSourceInfo(this.value);
+        });
+    </script>
+</body>
+</html>

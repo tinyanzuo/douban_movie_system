@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社交互动 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { width: 280px; flex-shrink: 0; }
+        .main-content { flex: 1; min-width: 0; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h2 { margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; font-size: 1.2rem; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; width: 100%; margin-bottom: 10px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-warning { background: #ecc94b; color: #744210; }
+        .result-area { background: #f7fafc; border-radius: 10px; padding: 15px; min-height: 400px; font-family: monospace; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+        @media (max-width: 768px) { .sidebar { width: 100%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/data_collection">数据采集</a>
+                <a href="/data_analysis">数据分析</a>
+                <a href="/movie_analysis">电影分析</a>
+                <a href="/recommendation">推荐引擎</a>
+                <a href="/ai_assistant">AI助手</a>
+                <a href="/social" class="active">社交互动</a>
+                <a href="/user">用户系统</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="card">
+                <h2>👥 社交功能</h2>
+                <button class="btn btn-primary" onclick="matchFans()">👥 影迷匹配</button>
+                <button class="btn btn-primary" onclick="watchChallenge()">🎯 观影挑战/打卡</button>
+                <button class="btn btn-success" onclick="blindBox()">🎲 电影盲盒</button>
+                <button class="btn btn-success" onclick="quiz()">❓ 电影知识问答</button>
+                <button class="btn btn-warning" onclick="guessMovie()">🎬 台词猜电影</button>
+                <button class="btn btn-warning" onclick="annualSummary()">📅 年度影迷总结</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2>📋 互动内容</h2>
+                <div id="social-result" class="result-area">
+                    请点击左侧按钮开始互动...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function matchFans() {
+            const resultDiv = document.getElementById('social-result');
+            resultDiv.innerHTML = `=== 影迷匹配 ===\n\n与您口味相似的用户:\n\n  • user_005 - 相似度 85%\n  • user_012 - 相似度 76%\n  • user_018 - 相似度 72%\n  • user_003 - 相似度 68%\n\n💡 点击用户头像可以查看对方的观影记录`;
+        }
+        
+        function watchChallenge() {
+            const resultDiv = document.getElementById('social-result');
+            resultDiv.innerHTML = `=== 观影挑战 ===\n\n🎯 本周挑战: 观看3部经典科幻电影\n📅 进度: 1/3\n✅ 已完成: 《星际穿越》\n⏳ 待完成: 《盗梦空间》《2001太空漫游》\n\n📸 生成分享卡片: [分享到社交平台]`;
+        }
+        
+        function blindBox() {
+            const movies = ['肖申克的救赎', '霸王别姬', '阿甘正传', '盗梦空间', '星际穿越', '楚门的世界', '千与千寻', '海上钢琴师'];
+            const ratings = [9.7, 9.6, 9.5, 9.4, 9.4, 9.3, 9.4, 9.3];
+            const desc = ['希望让人自由', '风华绝代', '人生就像巧克力', '梦境与现实', '穿越时空的爱', '真实与虚假', '成长的旅程', '1900的故事'];
+            const idx = Math.floor(Math.random() * movies.length);
+            
+            const resultDiv = document.getElementById('social-result');
+            resultDiv.innerHTML = `=== 🎁 电影盲盒 ===\n\n恭喜你抽到了:\n\n🎬 《${movies[idx]}》\n⭐ ${ratings[idx]}分\n📝 ${desc[idx]}\n\n🎉 快去观看吧！`;
+        }
+        
+        function quiz() {
+            const resultDiv = document.getElementById('social-result');
+            resultDiv.innerHTML = `=== 电影知识问答 ===\n\nQ1: 《肖申克的救赎》中主角越狱用了多少年？\nA: 20年\n\nQ2: 《泰坦尼克号》的导演是谁？\nA: 詹姆斯·卡梅隆\n\nQ3: 《阿甘正传》中阿甘的妈妈说人生就像什么？\nA: 一盒巧克力\n\nQ4: 《盗梦空间》中主角用来辨别梦境的道具是什么？\nA: 陀螺\n\n🎯 你答对了几道？`;
+        }
+        
+        function guessMovie() {
+            const resultDiv = document.getElementById('social-result');
+            resultDiv.innerHTML = `=== 猜电影 ===\n\n📝 第一题:\n"生活就像一盒巧克力，你永远不知道你会得到什么。"\n🎬 答案: 《阿甘正传》\n\n📝 第二题:\n"You jump, I jump."\n🎬 答案: 《泰坦尼克号》\n\n📝 第三题:\n"希望是美好的，也许是人间至善。"\n🎬 答案: 《肖申克的救赎》\n\n📝 第四题:\n"有些鸟儿是注定不会被关在笼子里的。"\n🎬 答案: 《肖申克的救赎》`;
+        }
+        
+        function annualSummary() {
+            const resultDiv = document.getElementById('social-result');
+            resultDiv.innerHTML = `=== 📅 2024年度影迷总结 ===\n\n🎬 全年观影: 45部\n⏰ 观影时长: 90小时\n⭐ 平均评分: 8.2分\n🏆 年度最爱: 《奥本海默》\n🎭 最爱的导演: 克里斯托弗·诺兰\n🎬 最爱的演员: 莱昂纳多\n\n🎉 恭喜你成为影迷达人！\n📊 超越全国95%的用户`;
+        }
+    </script>
+</body>
+</html>

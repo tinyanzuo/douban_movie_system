@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI助手 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .chat-area { height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
+        .message { margin-bottom: 15px; display: flex; }
+        .message.user { justify-content: flex-end; }
+        .message.ai { justify-content: flex-start; }
+        .message-content { max-width: 70%; padding: 10px 15px; border-radius: 18px; line-height: 1.5; }
+        .message.user .message-content { background: #667eea; color: white; border-bottom-right-radius: 4px; }
+        .message.ai .message-content { background: #e2e8f0; color: #333; border-bottom-left-radius: 4px; }
+        .input-area { display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 14px; }
+        .input-area button { padding: 12px 25px; background: #667eea; color: white; border: none; border-radius: 25px; cursor: pointer; transition: all 0.3s; }
+        .input-area button:hover { background: #5a67d8; }
+        .quick-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .quick-btn { padding: 8px 16px; background: #edf2f7; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; transition: all 0.3s; }
+        .quick-btn:hover { background: #cbd5e0; }
+        @media (max-width: 768px) { .message-content { max-width: 85%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/data_collection">数据采集</a>
+                <a href="/data_analysis">数据分析</a>
+                <a href="/movie_analysis">电影分析</a>
+                <a href="/recommendation">推荐引擎</a>
+                <a href="/ai_assistant" class="active">AI助手</a>
+                <a href="/social">社交互动</a>
+                <a href="/user">用户系统</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">🤖 AI电影助手</h2>
+            
+            <div class="quick-buttons">
+                <button class="quick-btn" onclick="sendQuick('推荐几部经典电影')">🎬 推荐经典电影</button>
+                <button class="quick-btn" onclick="sendQuick('肖申克的救赎评分多少')">⭐ 查询评分</button>
+                <button class="quick-btn" onclick="sendQuick('有什么好看的科幻片')">🚀 科幻片推荐</button>
+                <button class="quick-btn" onclick="sendQuick('电影有哪些类型')">🎭 电影类型</button>
+            </div>
+            
+            <div id="chat-area" class="chat-area">
+                <div class="message ai">
+                    <div class="message-content">
+                        你好！我是AI电影助手 🎬<br>
+                        我可以帮你推荐电影、查询评分、介绍电影类型等<br>
+                        有什么可以帮你的吗？
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="message-input" placeholder="输入你的问题..." onkeypress="if(event.keyCode===13) sendMessage()">
+                <button onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addMessage(message, 'user');
+            input.value = '';
+            
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage(data.response, 'ai');
+                } else {
+                    addMessage('抱歉，我遇到了一些问题，请稍后再试。', 'ai');
+                }
+            });
+        }
+        
+        function sendQuick(message) {
+            addMessage(message, 'user');
+            
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage(data.response, 'ai');
+                }
+            });
+        }
+        
+        function addMessage(text, sender) {
+            const chatArea = document.getElementById('chat-area');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<div class="message-content">${text}</div>`;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+    </script>
+</body>
+</html>
