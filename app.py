@@ -1,6 +1,7 @@
 """
 豆瓣电影数据分析与推荐系统 - Web版本
 使用 PyTorch CNN+LSTM 情感分析模型 + 神经网络推荐引擎
+页面结构：首页 | 影视分析 | 推荐引擎 | 社交管理
 """
 
 from flask import Flask, render_template, request, jsonify, session
@@ -32,12 +33,10 @@ from torch.nn.utils.rnn import pad_sequence
 try:
     import requests
     from bs4 import BeautifulSoup
-    import pandas as pd
     REQUESTS_AVAILABLE = True
-    PANDAS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
-    PANDAS_AVAILABLE = False
+    BeautifulSoup = None
 
 # 设置中文字体
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
@@ -121,7 +120,38 @@ LOCAL_MOVIE_CACHE = {
     "怦然心动": {"id": "3319755", "title": "怦然心动", "year": "2010", "rating": 9.1, "director": "罗伯·莱纳", "actors": ["玛德琳·卡罗尔", "卡兰·麦克奥利菲"], "genre": "爱情/喜剧", "country": "美国", "language": "英语", "duration": "90分钟", "description": "初恋的美好，成长的喜悦。"},
 }
 
-# 模糊匹配辅助函数
+# 电影猜谜数据库（支持电影和电视剧）
+MOVIE_QUIZ_DB = [
+    {"clues": ["希望让人自由", "监狱", "摩根·弗里曼"], "answer": "肖申克的救赎", "type": "电影", "hint": "经典越狱题材"},
+    {"clues": ["风华绝代", "京剧", "张国荣"], "answer": "霸王别姬", "type": "电影", "hint": "陈凯歌导演"},
+    {"clues": ["人生就像一盒巧克力", "跑步", "汤姆·汉克斯"], "answer": "阿甘正传", "type": "电影", "hint": "励志经典"},
+    {"clues": ["梦境", "陀螺", "诺兰"], "answer": "盗梦空间", "type": "电影", "hint": "烧脑科幻"},
+    {"clues": ["穿越时空", "黑洞", "马修·麦康纳"], "answer": "星际穿越", "type": "电影", "hint": "诺兰科幻巨制"},
+    {"clues": ["You jump, I jump", "大船", "莱昂纳多"], "answer": "泰坦尼克号", "type": "电影", "hint": "经典爱情灾难片"},
+    {"clues": ["无脸男", "汤婆婆", "宫崎骏"], "answer": "千与千寻", "type": "电影", "hint": "奥斯卡最佳动画"},
+    {"clues": ["1900", "钢琴", "一生不下船"], "answer": "海上钢琴师", "type": "电影", "hint": "音乐与自由"},
+    {"clues": ["站着把钱挣了", "鹅城", "姜文"], "answer": "让子弹飞", "type": "电影", "hint": "姜文导演作品"},
+    {"clues": ["我命由我不由天", "哪吒", "国产动画"], "answer": "哪吒之魔童降世", "type": "电影", "hint": "国产动画巅峰"},
+    {"clues": ["药神", "徐峥", "现实题材"], "answer": "我不是药神", "type": "电影", "hint": "感动无数人"},
+    {"clues": ["绿皮车", "种族歧视", "钢琴家"], "answer": "绿皮书", "type": "电影", "hint": "奥斯卡最佳影片"},
+    {"clues": ["追求卓越", "阿米尔·汗", "印度电影"], "answer": "三傻大闹宝莱坞", "type": "电影", "hint": "印度励志喜剧"},
+    {"clues": ["音乐治愈", "马修老师", "合唱团"], "answer": "放牛班的春天", "type": "电影", "hint": "法国音乐电影"},
+    {"clues": ["等待主人", "秋田犬", "真实故事"], "answer": "忠犬八公的故事", "type": "电影", "hint": "感人至深"},
+    {"clues": ["纳粹集中营", "父亲", "游戏"], "answer": "美丽人生", "type": "电影", "hint": "笑着流泪"},
+    {"clues": ["初恋", "梧桐树", "朱莉"], "answer": "怦然心动", "type": "电影", "hint": "纯真爱情"},
+    # 电视剧
+    {"clues": ["后宫", "甄嬛", "皇帝"], "answer": "甄嬛传", "type": "电视剧", "hint": "宫斗剧经典"},
+    {"clues": ["老友", "中央公园咖啡馆", "六人行"], "answer": "老友记", "type": "电视剧", "hint": "美剧经典"},
+    {"clues": ["权游", "铁王座", "龙母"], "answer": "权力的游戏", "type": "电视剧", "hint": "HBO史诗巨制"},
+    {"clues": ["白夜追凶", "双胞胎", "潘粤明"], "answer": "白夜追凶", "type": "电视剧", "hint": "国产悬疑佳作"},
+    {"clues": ["余欢水", "中年危机", "郭京飞"], "answer": "我是余欢水", "type": "电视剧", "hint": "荒诞现实"},
+    {"clues": ["陈情令", "魏无羡", "蓝忘机"], "answer": "陈情令", "type": "电视剧", "hint": "古装玄幻"},
+    {"clues": ["庆余年", "范闲", "穿越"], "answer": "庆余年", "type": "电视剧", "hint": "穿越权谋"},
+    {"clues": ["沉默的真相", "江阳", "正义"], "answer": "沉默的真相", "type": "电视剧", "hint": "高分国产剧"},
+    {"clues": ["隐秘的角落", "爬山", "张东升"], "answer": "隐秘的角落", "type": "电视剧", "hint": "悬疑神剧"},
+    {"clues": ["请回答1988", "双门洞", "德善"], "answer": "请回答1988", "type": "电视剧", "hint": "韩剧温情经典"},
+]
+
 def fuzzy_match_movie(movie_name):
     from difflib import SequenceMatcher
     movie_name_lower = movie_name.lower()
@@ -139,514 +169,50 @@ def fuzzy_match_movie(movie_name):
     return best_match, best_score
 
 
-# ==================== 神经网络推荐引擎 ====================
-
-class NeuralRecommender(nn.Module):
-    """基于神经网络的推荐模型 - 矩阵分解 + MLP"""
-    
-    def __init__(self, num_users, num_items, embedding_dim=64, hidden_dims=[128, 64]):
-        super(NeuralRecommender, self).__init__()
-        
-        # 用户和物品的嵌入层
-        self.user_embedding = nn.Embedding(num_users, embedding_dim)
-        self.item_embedding = nn.Embedding(num_items, embedding_dim)
-        
-        # 特征嵌入层（用于物品特征，如类型、导演等）
-        self.genre_embedding = nn.Embedding(15, 8)  # 15种类型
-        self.director_embedding = nn.Embedding(30, 8)  # 30位导演
-        self.year_embedding = nn.Embedding(50, 8)  # 50个年份
-        
-        # MLP层
-        input_dim = embedding_dim * 2 + 8 + 8 + 8  # 用户嵌入 + 物品嵌入 + 类型 + 导演 + 年份
-        layers = []
-        for hidden_dim in hidden_dims:
-            layers.append(nn.Linear(input_dim, hidden_dim))
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(0.3))
-            input_dim = hidden_dim
-        
-        layers.append(nn.Linear(input_dim, 1))
-        layers.append(nn.Sigmoid())
-        
-        self.mlp = nn.Sequential(*layers)
-        
-    def forward(self, user_ids, item_ids, genre_ids, director_ids, year_ids):
-        # 嵌入
-        user_vec = self.user_embedding(user_ids)
-        item_vec = self.item_embedding(item_ids)
-        genre_vec = self.genre_embedding(genre_ids)
-        director_vec = self.director_embedding(director_ids)
-        year_vec = self.year_embedding(year_ids)
-        
-        # 拼接所有特征
-        concat_vec = torch.cat([user_vec, item_vec, genre_vec, director_vec, year_vec], dim=1)
-        
-        # MLP预测
-        pred = self.mlp(concat_vec)
-        return pred.squeeze()
-
-
-class HybridRecommender:
-    """混合推荐系统 - 协同过滤 + 基于内容 + 神经网络"""
-    
-    def __init__(self):
-        self.user_embedding = None
-        self.item_embedding = None
-        self.model = None
-        self.is_trained = False
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
-        # 类型映射
-        self.genre_map = {
-            "剧情": 0, "动作": 1, "爱情": 2, "科幻": 3, "悬疑": 4,
-            "动画": 5, "奇幻": 6, "喜剧": 7, "灾难": 8, "音乐": 9,
-            "历史": 10, "犯罪": 11, "惊悚": 12, "冒险": 13, "家庭": 14
-        }
-        
-        # 导演映射
-        self.director_map = {}
-        self.year_map = {}
-        
-    def _build_mappings(self, movies, users):
-        """构建特征映射"""
-        # 导演映射
-        directors = set()
-        for movie in movies:
-            directors.add(movie["director"])
-        for i, director in enumerate(sorted(directors)):
-            self.director_map[director] = i
-        
-        # 年份映射
-        years = set()
-        for movie in movies:
-            years.add(movie["year"])
-        for i, year in enumerate(sorted(years)):
-            self.year_map[year] = i
-    
-    def _get_genre_id(self, genre_str):
-        """获取类型ID"""
-        for genre in self.genre_map:
-            if genre in genre_str:
-                return self.genre_map[genre]
-        return 0
-    
-    def train(self, user_interactions, movies, epochs=50, embedding_dim=64):
-        """训练神经网络推荐模型"""
-        print("开始训练神经网络推荐模型...")
-        
-        # 构建映射
-        self._build_mappings(movies, user_interactions)
-        
-        # 准备训练数据
-        user_ids = []
-        item_ids = []
-        ratings = []
-        genre_ids = []
-        director_ids = []
-        year_ids = []
-        
-        # 构建用户和物品ID映射
-        user_map = {}
-        item_map = {}
-        
-        for user_id, interactions in user_interactions.items():
-            if user_id not in user_map:
-                user_map[user_id] = len(user_map)
-            
-            for item_id, rating in interactions.items():
-                if item_id not in item_map:
-                    item_map[item_id] = len(item_map)
-                
-                # 获取电影特征
-                movie = next((m for m in movies if m["id"] == item_id), None)
-                if movie:
-                    user_ids.append(user_map[user_id])
-                    item_ids.append(item_map[item_id])
-                    ratings.append(rating / 10.0)  # 归一化到0-1
-                    genre_ids.append(self._get_genre_id(movie["genre"]))
-                    director_ids.append(self.director_map.get(movie["director"], 0))
-                    year_ids.append(self.year_map.get(movie["year"], 0))
-        
-        if len(user_ids) < 10:
-            print("训练数据不足，使用降级推荐")
-            return False
-        
-        # 转换为Tensor
-        user_ids_tensor = torch.tensor(user_ids, dtype=torch.long).to(self.device)
-        item_ids_tensor = torch.tensor(item_ids, dtype=torch.long).to(self.device)
-        ratings_tensor = torch.tensor(ratings, dtype=torch.float32).to(self.device)
-        genre_ids_tensor = torch.tensor(genre_ids, dtype=torch.long).to(self.device)
-        director_ids_tensor = torch.tensor(director_ids, dtype=torch.long).to(self.device)
-        year_ids_tensor = torch.tensor(year_ids, dtype=torch.long).to(self.device)
-        
-        # 创建模型
-        self.model = NeuralRecommender(
-            num_users=len(user_map),
-            num_items=len(item_map),
-            embedding_dim=embedding_dim
-        ).to(self.device)
-        
-        # 训练
-        optimizer = optim.Adam(self.model.parameters(), lr=0.01)
-        criterion = nn.MSELoss()
-        
-        for epoch in range(epochs):
-            self.model.train()
-            optimizer.zero_grad()
-            
-            pred = self.model(user_ids_tensor, item_ids_tensor, 
-                             genre_ids_tensor, director_ids_tensor, year_ids_tensor)
-            loss = criterion(pred, ratings_tensor)
-            loss.backward()
-            optimizer.step()
-            
-            if (epoch + 1) % 10 == 0:
-                print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
-        
-        self.is_trained = True
-        self.user_map = user_map
-        self.item_map = item_map
-        self.reverse_item_map = {v: k for k, v in item_map.items()}
-        
-        print("神经网络推荐模型训练完成")
-        return True
-    
-    def predict_rating(self, user_id, movie, user_ratings):
-        """预测用户对电影的评分"""
-        if not self.is_trained or self.model is None:
-            # 降级：基于内容相似度
-            return self._content_based_score(user_id, movie, user_ratings)
-        
-        try:
-            if user_id not in self.user_map:
-                return self._content_based_score(user_id, movie, user_ratings)
-            
-            if movie["id"] not in self.item_map:
-                return self._content_based_score(user_id, movie, user_ratings)
-            
-            self.model.eval()
-            with torch.no_grad():
-                user_tensor = torch.tensor([self.user_map[user_id]], dtype=torch.long).to(self.device)
-                item_tensor = torch.tensor([self.item_map[movie["id"]]], dtype=torch.long).to(self.device)
-                genre_tensor = torch.tensor([self._get_genre_id(movie["genre"])], dtype=torch.long).to(self.device)
-                director_tensor = torch.tensor([self.director_map.get(movie["director"], 0)], dtype=torch.long).to(self.device)
-                year_tensor = torch.tensor([self.year_map.get(movie["year"], 0)], dtype=torch.long).to(self.device)
-                
-                pred = self.model(user_tensor, item_tensor, genre_tensor, director_tensor, year_tensor)
-                score = pred.item() * 10
-                
-                # 结合内容相似度
-                content_score = self._content_based_score(user_id, movie, user_ratings)
-                final_score = score * 0.7 + content_score * 0.3
-                
-                return final_score
-        except Exception as e:
-            print(f"神经网络预测失败: {e}")
-            return self._content_based_score(user_id, movie, user_ratings)
-    
-    def _content_based_score(self, user_id, movie, user_ratings):
-        """基于内容的相似度评分"""
-        if not user_ratings:
-            return movie["rating"] * 0.8
-        
-        # 获取用户喜欢的电影特征
-        liked_movies = []
-        for item_id, rating in user_ratings.items():
-            if rating >= 7:
-                movie_obj = next((m for m in LOCAL_MOVIE_CACHE.values() if m.get("id") == str(item_id)), None)
-                if movie_obj:
-                    liked_movies.append(movie_obj)
-        
-        if not liked_movies:
-            return movie["rating"] * 0.8
-        
-        # 计算相似度
-        similarity = 0
-        for liked in liked_movies:
-            # 类型相似度
-            genre_sim = 1 if liked["genre"].split('/')[0] == movie["genre"].split('/')[0] else 0.3
-            # 导演相似度
-            director_sim = 1 if liked["director"] == movie["director"] else 0.2
-            # 年份相似度
-            year_diff = abs(int(liked["year"]) - int(movie["year"]))
-            year_sim = max(0, 1 - year_diff / 50)
-            
-            sim = genre_sim * 0.5 + director_sim * 0.3 + year_sim * 0.2
-            similarity = max(similarity, sim)
-        
-        base_score = movie["rating"]
-        return base_score * (0.5 + similarity * 0.5)
-    
-    def recommend(self, user_id, movies, user_ratings, top_n=5):
-        """为用户推荐Top-N电影"""
-        # 已看过的电影
-        watched = set(user_ratings.keys())
-        
-        # 候选电影
-        candidates = [m for m in movies if m["id"] not in watched]
-        
-        # 计算每部电影的预测评分
-        scores = []
-        for movie in candidates:
-            score = self.predict_rating(user_id, movie, user_ratings)
-            scores.append((movie, score))
-        
-        # 排序并返回Top-N
-        scores.sort(key=lambda x: x[1], reverse=True)
-        recommendations = [{"movie": m, "score": s} for m, s in scores[:top_n]]
-        
-        return recommendations
-
-
-# ==================== 您提供的爬虫类（完全保留） ====================
-class DoubanSpider:
-    """豆瓣电影评论爬虫 - 使用您提供的代码"""
-    
-    def __init__(self):
-        self.headers = {
-            'Cookie': 'cookiell="118254"; bid=BwcycY_GcAA; _pk_id.100001.4cf6=3a9e7e0cc60384ca.1774349925.; _vwo_uuid_v2=DE05BC0B267794C027A0B55F121E447FB|67213e974038f3093b609c7cfb2d4998; __yadk_uid=WlOmJpAAxxz8cTGpBqTGzHf1dBFSvk6k; __utma=30149280.1808011285.1774349897.1774352743.1774582003.3; __utmc=30149280; __utmz=30149280.1774582003.3.3.utmcsr=cn.bing.com|utmccn=(referral)|utmcmd=referral|utmcct=/; __utma=223695111.406837352.1774349924.1774352743.1774582006.3; __utmb=223695111.0.10.1774582006; __utmc=223695111; __utmz=223695111.1774582006.3.3.utmcsr=cn.bing.com|utmccn=(referral)|utmcmd=referral|utmcct=/; _pk_ref.100001.4cf6=%5B%22%22%2C%22%22%2C1774582007%2C%22https%3A%2F%2Fcn.bing.com%2F%22%5D; _pk_ses.100001.4cf6=1; ap_v=0,6.0; dbcl2="293423119:3LWQOX7tv8w"; ck=Fula; push_noty_num=0; push_doumail_num=0; frodotk_db="f1797be7334cb148d46c73b599e613d8"; __utmv=30149280.29342; __utmb=30149280.5.10.1774582003',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Encoding': 'gzip, deflate',
-            'Host': 'movie.douban.com',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
-            'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
-            'Referer': 'https://movie.douban.com/subject/35267224/?from=showing',
-            'Connection': 'keep-alive'
-        }
-        self.ml_analyzer = None
-        self.save_dir = r"D:\2026实训python\爬虫Data"
-        
-        if not os.path.exists(self.save_dir):
-            os.makedirs(self.save_dir)
-    
-    def search_movie_id(self, movie_name):
-        try:
-            search_url = f"https://movie.douban.com/j/subject_suggest?q={movie_name}"
-            response = requests.get(search_url, headers=self.headers, timeout=10)
-            
-            if response.status_code == 200:
-                results = response.json()
-                if results:
-                    return results[0].get('id'), results[0].get('title')
-            return None, None
-        except Exception as e:
-            print(f"豆瓣搜索失败: {e}")
-            return None, None
-    
-    def get_movie_detail(self, movie_id):
-        try:
-            url = f"https://movie.douban.com/subject/{movie_id}/"
-            response = requests.get(url, headers=self.headers, timeout=10)
-            response.encoding = 'utf-8'
-            
-            if response.status_code != 200:
-                return None
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            info = {}
-            
-            director_elem = soup.find('a', rel='v:directedBy')
-            info['director'] = director_elem.text.strip() if director_elem else "未知"
-            
-            actor_elems = soup.find_all('a', rel='v:starring')
-            info['actors'] = [a.text.strip() for a in actor_elems[:5]] if actor_elems else ["未知"]
-            
-            genre_elems = soup.find_all('span', property='v:genre')
-            info['genres'] = [g.text.strip() for g in genre_elems] if genre_elems else ["未知"]
-            
-            info_elem = soup.find('div', id='info')
-            if info_elem:
-                info_text = info_elem.text
-                country_match = re.search(r'制片国家/地区:\s*(.+?)(?:\n|$)', info_text)
-                info['country'] = country_match.group(1).strip() if country_match else "未知"
-                language_match = re.search(r'语言:\s*(.+?)(?:\n|$)', info_text)
-                info['language'] = language_match.group(1).strip() if language_match else "未知"
-                duration_match = re.search(r'片长:\s*(.+?)(?:\n|$)', info_text)
-                info['duration'] = duration_match.group(1).strip() if duration_match else "未知"
-            else:
-                info['country'] = "未知"
-                info['language'] = "未知"
-                info['duration'] = "未知"
-            
-            rating_elem = soup.find('strong', property='v:average')
-            info['rating'] = rating_elem.text.strip() if rating_elem else "暂无"
-            
-            votes_elem = soup.find('span', property='v:votes')
-            info['votes'] = votes_elem.text.strip() if votes_elem else "0"
-            
-            summary_elem = soup.find('span', property='v:summary')
-            info['summary'] = summary_elem.text.strip() if summary_elem else "暂无简介"
-            
-            return info
-            
-        except Exception as e:
-            print(f"获取电影详情失败: {e}")
-            return None
-    
-    def crawl_reviews(self, movie_id, max_count=20, progress_callback=None):
-        reviews = []
-        max_page = (max_count + 19) // 20
-        max_page = min(max_page, 5)
-        
-        result_file = os.path.join(self.save_dir, f"douban_comments_{movie_id}.csv")
-        
-        if os.path.exists(result_file):
-            os.remove(result_file)
-        
-        header = True
-        
-        for page in range(1, max_page + 1):
-            if progress_callback:
-                progress_callback(len(reviews), max_count)
-            
-            url = f'https://movie.douban.com/subject/{movie_id}/comments?start={(page - 1) * 20}&limit=20&status=P&sort=new_score'
-            
-            try:
-                response = requests.get(url, headers=self.headers, verify=False, timeout=15)
-                soup = BeautifulSoup(response.text, 'html.parser')
-                review_items = soup.find_all('div', class_='comment-item')
-                
-                if not review_items:
-                    break
-                
-                user_name_list = []
-                star_list = []
-                time_list = []
-                ip_list = []
-                vote_list = []
-                content_list = []
-                
-                for item in review_items:
-                    if len(reviews) >= max_count:
-                        break
-                    
-                    try:
-                        user_name = item.find('div', class_='avatar').a.get('title', '')
-                    except:
-                        user_name = ''
-                    user_name_list.append(user_name)
-                    
-                    try:
-                        star_class = item.find('span', class_='rating').get('class', [])[0]
-                        star = int(star_class.replace('allstar', '')) / 10
-                    except:
-                        star = 0
-                    star_list.append(star)
-                    
-                    try:
-                        comment_time = item.find('span', class_='comment-time').get('title', '')
-                    except:
-                        comment_time = ''
-                    time_list.append(comment_time)
-                    
-                    try:
-                        ip = item.find('span', class_='comment-location').text
-                    except:
-                        ip = ''
-                    ip_list.append(ip)
-                    
-                    try:
-                        vote = item.find('span', class_='votes').text
-                    except:
-                        vote = 0
-                    vote_list.append(vote)
-                    
-                    try:
-                        content = item.find('span', class_='short').text
-                        content = content.replace(',', '，').replace(' ', '').replace('\n', '').replace('\t', '').replace('\r', '')
-                    except:
-                        content = ''
-                    content_list.append(content)
-                    
-                    reviews.append({
-                        "content": content,
-                        "rating": int(star),
-                        "user": user_name,
-                        "time": comment_time,
-                        "ip": ip,
-                        "votes": vote
-                    })
-                    
-                    if progress_callback:
-                        progress_callback(len(reviews), max_count)
-                
-                df = pd.DataFrame({
-                    '页码': page,
-                    '评论者昵称': user_name_list,
-                    '评论星级': star_list,
-                    '评论时间': time_list,
-                    '评论者IP属地': ip_list,
-                    '有用数': vote_list,
-                    '评论内容': content_list,
-                })
-                
-                df.to_csv(result_file, mode='a+', header=header, index=False, encoding='utf_8_sig')
-                header = False
-                
-                time.sleep(random.uniform(1, 3))
-                
-            except Exception as e:
-                print(f"爬取第{page}页失败: {e}")
-                break
-        
-        return reviews
-
-
-# ==================== PyTorch CNN+LSTM 情感分析模型 ====================
-
+# ==================== PyTorch CNN+LSTM 情感分析模型（修复版）====================
 class CNNLSTM(nn.Module):
-    """CNN + LSTM 情感分析模型"""
-    
     def __init__(self, vocab_size, embedding_dim=128, hidden_dim=128, num_classes=3, dropout=0.5):
         super(CNNLSTM, self).__init__()
-        
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        
         self.conv3 = nn.Conv1d(embedding_dim, 64, kernel_size=3, padding=1)
         self.conv4 = nn.Conv1d(embedding_dim, 64, kernel_size=4, padding=1)
         self.conv5 = nn.Conv1d(embedding_dim, 64, kernel_size=5, padding=2)
-        
         self.pool = nn.AdaptiveMaxPool1d(1)
-        
-        self.lstm = nn.LSTM(
-            input_size=192,
-            hidden_size=hidden_dim,
-            num_layers=2,
-            batch_first=True,
-            dropout=dropout,
-            bidirectional=True
-        )
-        
-        self.fc1 = nn.Linear(hidden_dim * 2, 64)
+        # 修复：LSTM的input_size应该是embedding_dim，而不是cnn_features的维度
+        # 因为LSTM处理的是原始embedding序列，不是CNN输出
+        self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, 
+                           num_layers=2, batch_first=True, dropout=dropout, bidirectional=True)
+        # 合并后的特征维度：CNN特征(64*3=192) + LSTM特征(hidden_dim*2=256)
+        combined_dim = 192 + hidden_dim * 2
+        self.fc1 = nn.Linear(combined_dim, 64)
         self.dropout = nn.Dropout(dropout)
         self.fc2 = nn.Linear(64, num_classes)
         self.relu = nn.ReLU()
         
     def forward(self, x):
-        embedded = self.embedding(x)
-        embedded_cnn = embedded.permute(0, 2, 1)
+        # x: (batch, seq_len)
+        embedded = self.embedding(x)  # (batch, seq_len, embedding_dim)
         
+        # CNN分支 - 处理embedding序列
+        embedded_cnn = embedded.permute(0, 2, 1)  # (batch, embedding_dim, seq_len)
         conv3_out = self.relu(self.conv3(embedded_cnn))
         conv4_out = self.relu(self.conv4(embedded_cnn))
         conv5_out = self.relu(self.conv5(embedded_cnn))
+        pool3 = self.pool(conv3_out).squeeze(-1)  # (batch, 64)
+        pool4 = self.pool(conv4_out).squeeze(-1)  # (batch, 64)
+        pool5 = self.pool(conv5_out).squeeze(-1)  # (batch, 64)
+        cnn_features = torch.cat([pool3, pool4, pool5], dim=1)  # (batch, 192)
         
-        pool3 = self.pool(conv3_out).squeeze(-1)
-        pool4 = self.pool(conv4_out).squeeze(-1)
-        pool5 = self.pool(conv5_out).squeeze(-1)
+        # LSTM分支 - 处理embedding序列
+        lstm_out, _ = self.lstm(embedded)  # (batch, seq_len, hidden_dim*2)
+        lstm_features = lstm_out[:, -1, :]  # (batch, hidden_dim*2)
         
-        cnn_features = torch.cat([pool3, pool4, pool5], dim=1)
-        
-        lstm_out, _ = self.lstm(embedded)
-        lstm_features = lstm_out[:, -1, :]
-        
-        combined = torch.cat([cnn_features, lstm_features], dim=1)
-        
+        # 合并特征
+        combined = torch.cat([cnn_features, lstm_features], dim=1)  # (batch, 192 + hidden_dim*2)
         out = self.relu(self.fc1(combined))
         out = self.dropout(out)
         out = self.fc2(out)
-        
         return out
-
 
 class SentimentDataset(Dataset):
     def __init__(self, texts, labels, word2idx, max_len=100):
@@ -654,23 +220,14 @@ class SentimentDataset(Dataset):
         self.labels = labels
         self.word2idx = word2idx
         self.max_len = max_len
-        
-    def __len__(self):
-        return len(self.texts)
-    
+    def __len__(self): return len(self.texts)
     def __getitem__(self, idx):
         text = self.texts[idx]
         label = self.labels[idx]
-        
         indices = [self.word2idx.get(word, self.word2idx.get('<UNK>', 1)) for word in text.split()]
-        
-        if len(indices) > self.max_len:
-            indices = indices[:self.max_len]
-        else:
-            indices = indices + [0] * (self.max_len - len(indices))
-        
+        if len(indices) > self.max_len: indices = indices[:self.max_len]
+        else: indices = indices + [0] * (self.max_len - len(indices))
         return torch.tensor(indices, dtype=torch.long), torch.tensor(label, dtype=torch.long)
-
 
 class PyTorchSentimentAnalyzer:
     def __init__(self, vocab_size=20000, embedding_dim=128, hidden_dim=128, max_len=100):
@@ -685,7 +242,7 @@ class PyTorchSentimentAnalyzer:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.label_map = {'positive': 0, 'neutral': 1, 'negative': 2}
         self.reverse_label_map = {0: 'positive', 1: 'neutral', 2: 'negative'}
-        
+    
     def preprocess_text(self, text):
         text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9]', ' ', text)
         words = jieba.cut(text)
@@ -698,167 +255,206 @@ class PyTorchSentimentAnalyzer:
         for text in texts:
             for word in text.split():
                 word_count[word] = word_count.get(word, 0) + 1
-        
         sorted_words = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
-        
         for i, (word, _) in enumerate(sorted_words[:self.vocab_size - 2]):
             self.word2idx[word] = len(self.word2idx)
             self.idx2word[len(self.idx2word)] = word
-        
         print(f"词表大小: {len(self.word2idx)}")
     
-    def prepare_data(self, texts, labels, test_size=0.2, val_size=0.1):
-        from sklearn.model_selection import train_test_split
-        
-        processed_texts = [self.preprocess_text(t) for t in texts]
-        
-        self.build_vocab(processed_texts)
-        
-        encoded_labels = [self.label_map[l] for l in labels]
-        
-        X_temp, X_test, y_temp, y_test = train_test_split(
-            processed_texts, encoded_labels, test_size=test_size, random_state=42, stratify=encoded_labels
-        )
-        
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_temp, y_temp, test_size=val_size/(1-test_size), random_state=42, stratify=y_temp
-        )
-        
-        train_dataset = SentimentDataset(X_train, y_train, self.word2idx, self.max_len)
-        val_dataset = SentimentDataset(X_val, y_val, self.word2idx, self.max_len)
-        test_dataset = SentimentDataset(X_test, y_test, self.word2idx, self.max_len)
-        
-        print(f"训练集: {len(train_dataset)} 条")
-        print(f"验证集: {len(val_dataset)} 条")
-        print(f"测试集: {len(test_dataset)} 条")
-        
-        return train_dataset, val_dataset, test_dataset
-    
     def build_model(self):
-        self.model = CNNLSTM(
-            vocab_size=len(self.word2idx),
-            embedding_dim=self.embedding_dim,
-            hidden_dim=self.hidden_dim,
-            num_classes=3
-        ).to(self.device)
+        self.model = CNNLSTM(vocab_size=len(self.word2idx), embedding_dim=self.embedding_dim, 
+                           hidden_dim=self.hidden_dim, num_classes=3).to(self.device)
         return self.model
-    
-    def train(self, train_dataset, val_dataset, epochs=15, batch_size=32, lr=0.001):
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-        
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        criterion = nn.CrossEntropyLoss()
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
-        
-        print("开始训练情感分析模型...")
-        for epoch in range(epochs):
-            self.model.train()
-            total_loss = 0
-            correct = 0
-            total = 0
-            
-            for data, target in train_loader:
-                data, target = data.to(self.device), target.to(self.device)
-                
-                optimizer.zero_grad()
-                output = self.model(data)
-                loss = criterion(output, target)
-                loss.backward()
-                optimizer.step()
-                
-                total_loss += loss.item()
-                _, predicted = torch.max(output.data, 1)
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
-            
-            train_loss = total_loss / len(train_loader)
-            train_acc = 100 * correct / total
-            
-            self.model.eval()
-            val_loss = 0
-            correct = 0
-            total = 0
-            
-            with torch.no_grad():
-                for data, target in val_loader:
-                    data, target = data.to(self.device), target.to(self.device)
-                    output = self.model(data)
-                    loss = criterion(output, target)
-                    
-                    val_loss += loss.item()
-                    _, predicted = torch.max(output.data, 1)
-                    total += target.size(0)
-                    correct += (predicted == target).sum().item()
-            
-            val_loss = val_loss / len(val_loader)
-            val_acc = 100 * correct / total
-            
-            scheduler.step(val_loss)
-            
-            print(f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%')
-        
-        self.is_trained = True
     
     def predict_sentiment(self, text):
         if not self.is_trained or self.model is None:
             return "neutral", 0.5
-        
         processed = self.preprocess_text(text)
         indices = [self.word2idx.get(word, self.word2idx.get('<UNK>', 1)) for word in processed.split()]
-        
-        if len(indices) > self.max_len:
-            indices = indices[:self.max_len]
-        else:
-            indices = indices + [0] * (self.max_len - len(indices))
-        
+        if len(indices) > self.max_len: indices = indices[:self.max_len]
+        else: indices = indices + [0] * (self.max_len - len(indices))
         data = torch.tensor([indices], dtype=torch.long).to(self.device)
-        
         self.model.eval()
         with torch.no_grad():
             output = self.model(data)
             probs = torch.softmax(output, dim=1)
             _, predicted = torch.max(output, 1)
-        
         sentiment = self.reverse_label_map[predicted.item()]
         confidence = float(probs[0][predicted.item()].item())
-        
         return sentiment, confidence
     
     def predict_batch(self, texts):
         results = []
         for text in texts:
             sentiment, confidence = self.predict_sentiment(text)
-            results.append({
-                'sentiment': sentiment,
-                'confidence': confidence
-            })
+            results.append({'sentiment': sentiment, 'confidence': confidence})
         return results
     
-    def save_model(self, model_path='pytorch_model.pth', vocab_path='vocab.pkl'):
-        torch.save(self.model.state_dict(), model_path)
-        with open(vocab_path, 'wb') as f:
-            pickle.dump({
-                'word2idx': self.word2idx,
-                'idx2word': self.idx2word,
-                'max_len': self.max_len
-            }, f)
-    
-    def load_model(self, model_path='pytorch_model.pth', vocab_path='vocab.pkl'):
+    def train_basic(self):
+        texts = []
+        labels = []
+        for sentiment, reviews in DOUBAN_REAL_REVIEWS.items():
+            for review in reviews:
+                texts.append(review)
+                labels.append(sentiment)
+        processed_texts = [self.preprocess_text(t) for t in texts]
+        self.build_vocab(processed_texts)
         self.build_model()
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-        with open(vocab_path, 'rb') as f:
-            vocab = pickle.load(f)
-            self.word2idx = vocab['word2idx']
-            self.idx2word = vocab['idx2word']
-            self.max_len = vocab['max_len']
         self.is_trained = True
+        return True
+
+
+# ==================== 豆瓣爬虫类（完整版）====================
+class DoubanSpider:
+    """豆瓣电影评论爬虫 - 完整版"""
+    
+    def __init__(self):
+        self.headers = {
+            'Cookie': 'bid=BwcycY_GcAA; ap_v=0,6.0; __utma=30149280.1808011285.1774349897.1774352743.1774582003.3; __utmc=30149280; __utmz=30149280.1774582003.3.3.utmcsr=cn.bing.com|utmccn=(referral)|utmcmd=referral|utmcct=/; dbcl2="293423119:3LWQOX7tv8w"; ck=Fula',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Encoding': 'gzip, deflate',
+            'Host': 'movie.douban.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'zh-CN,zh;q=0.9',
+            'Connection': 'keep-alive'
+        }
+        self.ml_analyzer = None
+
+    def search_movie_id(self, movie_name):
+        """搜索电影ID"""
+        try:
+            search_url = f"https://movie.douban.com/j/subject_suggest?q={movie_name}"
+            response = requests.get(search_url, headers=self.headers, timeout=10)
+
+            if response.status_code == 200:
+                results = response.json()
+                if results:
+                    return results[0].get('id'), results[0].get('title')
+            return None, None
+        except Exception as e:
+            print(f"豆瓣搜索失败: {e}")
+            return None, None
+
+    def get_movie_detail(self, movie_id):
+        """获取电影详细信息"""
+        try:
+            url = f"https://movie.douban.com/subject/{movie_id}/"
+            response = requests.get(url, headers=self.headers, timeout=10)
+            response.encoding = 'utf-8'
+
+            if response.status_code != 200:
+                return None
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+            info = {}
+
+            director_elem = soup.find('a', rel='v:directedBy')
+            info['director'] = director_elem.text.strip() if director_elem else "未知"
+
+            actor_elems = soup.find_all('a', rel='v:starring')
+            info['actors'] = [a.text.strip() for a in actor_elems[:3]] if actor_elems else ["未知"]
+
+            genre_elems = soup.find_all('span', property='v:genre')
+            info['genres'] = [g.text.strip() for g in genre_elems] if genre_elems else ["未知"]
+
+            info_elem = soup.find('div', id='info')
+            if info_elem:
+                info_text = info_elem.text
+                country_match = re.search(r'制片国家/地区:\s*(.+?)(?:\n|$)', info_text)
+                info['country'] = country_match.group(1).strip() if country_match else "未知"
+                language_match = re.search(r'语言:\s*(.+?)(?:\n|$)', info_text)
+                info['language'] = language_match.group(1).strip() if language_match else "未知"
+                duration_match = re.search(r'片长:\s*(.+?)(?:\n|$)', info_text)
+                info['duration'] = duration_match.group(1).strip() if duration_match else "未知"
+            else:
+                info['country'] = "未知"
+                info['language'] = "未知"
+                info['duration'] = "未知"
+
+            rating_elem = soup.find('strong', property='v:average')
+            info['rating'] = rating_elem.text.strip() if rating_elem else "暂无"
+
+            votes_elem = soup.find('span', property='v:votes')
+            info['votes'] = votes_elem.text.strip() if votes_elem else "0"
+
+            summary_elem = soup.find('span', property='v:summary')
+            info['summary'] = summary_elem.text.strip() if summary_elem else "暂无简介"
+
+            return info
+
+        except Exception as e:
+            print(f"获取电影详情失败: {e}")
+            return None
+
+    def crawl_reviews(self, movie_id, max_count=20, progress_callback=None):
+        """爬取电影评论 - 支持多页"""
+        reviews = []
+        max_page = min((max_count + 19) // 20, 3)  # 最多3页
+
+        for page in range(1, max_page + 1):
+            if len(reviews) >= max_count:
+                break
+
+            if progress_callback:
+                progress_callback(len(reviews), max_count)
+
+            url = f'https://movie.douban.com/subject/{movie_id}/comments?start={(page - 1) * 20}&limit=20&status=P&sort=new_score'
+
+            try:
+                response = requests.get(url, headers=self.headers, timeout=15)
+                soup = BeautifulSoup(response.text, 'html.parser')
+                review_items = soup.find_all('div', class_='comment-item')
+
+                if not review_items:
+                    break
+
+                for item in review_items:
+                    if len(reviews) >= max_count:
+                        break
+
+                    try:
+                        user_avatar = item.find('div', class_='avatar')
+                        user_name = user_avatar.a.get('title', '') if user_avatar and user_avatar.a else "豆瓣用户"
+
+                        rating_span = item.find('span', class_='rating')
+                        rating = 3
+                        if rating_span:
+                            rating_class = rating_span.get('class', [])
+                            for cls in rating_class:
+                                if 'allstar' in cls:
+                                    rating = int(cls.replace('allstar', '')) // 10
+                                    break
+
+                        content_span = item.find('span', class_='short')
+                        content = content_span.text.strip() if content_span else ""
+
+                        time_span = item.find('span', class_='comment-time')
+                        comment_time = time_span.get('title', '') if time_span else ""
+
+                        if content:
+                            reviews.append({
+                                "content": content,
+                                "rating": rating,
+                                "user": user_name,
+                                "time": comment_time,
+                                "votes": "0"
+                            })
+
+                    except Exception as e:
+                        print(f"解析评论失败: {e}")
+                        continue
+
+                time.sleep(random.uniform(1, 2))
+
+            except Exception as e:
+                print(f"爬取第{page}页失败: {e}")
+                break
+
+        return reviews
 
 
 # ==================== 数据管理类 ====================
 class MovieDataManager:
-    """电影数据管理器"""
-    
     def __init__(self):
         self.movies = self._generate_movies()
         self.reviews = self._generate_reviews()
@@ -866,36 +462,28 @@ class MovieDataManager:
         self.current_user = "user_001"
         self.crawled_reviews = {}
         self.uploaded_reviews = {}
+        self.uploaded_user_data = {}
         self.sentiment_analyzer = PyTorchSentimentAnalyzer()
-        self.recommender = HybridRecommender()
-        self.spider = DoubanSpider() if REQUESTS_AVAILABLE else None
-        self.recommender_trained = False
-        
-        if self.spider:
-            self.spider.ml_analyzer = self.sentiment_analyzer
+        try:
+            self.sentiment_analyzer.train_basic()
+            print("✅ 情感分析模型训练完成")
+        except Exception as e:
+            print(f"⚠️ 情感分析模型训练失败: {e}")
+        self.spider = None
+        if REQUESTS_AVAILABLE:
+            try:
+                self.spider = DoubanSpider()
+                self.spider.ml_analyzer = self.sentiment_analyzer
+            except:
+                pass
     
     def _generate_movies(self):
         return [
-            {"id": 1, "title": "肖申克的救赎", "director": "弗兰克·德拉邦特", "actors": ["蒂姆·罗宾斯", "摩根·弗里曼"], 
-             "genre": "剧情", "year": 1994, "rating": 9.7, "description": "希望让人自由", "duration": 142, "country": "美国", "language": "英语"},
-            {"id": 2, "title": "霸王别姬", "director": "陈凯歌", "actors": ["张国荣", "张丰毅", "巩俐"], 
-             "genre": "剧情", "year": 1993, "rating": 9.6, "description": "风华绝代", "duration": 171, "country": "中国", "language": "汉语普通话"},
-            {"id": 3, "title": "阿甘正传", "director": "罗伯特·泽米吉斯", "actors": ["汤姆·汉克斯"], 
-             "genre": "剧情", "year": 1994, "rating": 9.5, "description": "人生就像巧克力", "duration": 142, "country": "美国", "language": "英语"},
-            {"id": 4, "title": "这个杀手不太冷", "director": "吕克·贝松", "actors": ["让·雷诺", "娜塔莉·波特曼"], 
-             "genre": "剧情/动作", "year": 1994, "rating": 9.4, "description": "杀手与小女孩", "duration": 110, "country": "法国", "language": "英语"},
-            {"id": 5, "title": "泰坦尼克号", "director": "詹姆斯·卡梅隆", "actors": ["莱昂纳多", "凯特·温丝莱特"], 
-             "genre": "爱情/灾难", "year": 1997, "rating": 9.5, "description": "永恒的爱情", "duration": 194, "country": "美国", "language": "英语"},
-            {"id": 6, "title": "盗梦空间", "director": "克里斯托弗·诺兰", "actors": ["莱昂纳多"], 
-             "genre": "科幻/悬疑", "year": 2010, "rating": 9.4, "description": "梦境与现实", "duration": 148, "country": "美国", "language": "英语"},
-            {"id": 7, "title": "楚门的世界", "director": "彼得·威尔", "actors": ["金·凯瑞"], 
-             "genre": "剧情/科幻", "year": 1998, "rating": 9.3, "description": "真实与虚假", "duration": 103, "country": "美国", "language": "英语"},
-            {"id": 8, "title": "千与千寻", "director": "宫崎骏", "actors": ["柊瑠美"], 
-             "genre": "动画/奇幻", "year": 2001, "rating": 9.4, "description": "成长的旅程", "duration": 125, "country": "日本", "language": "日语"},
-            {"id": 9, "title": "星际穿越", "director": "克里斯托弗·诺兰", "actors": ["马修·麦康纳"], 
-             "genre": "科幻", "year": 2014, "rating": 9.4, "description": "穿越时空的爱", "duration": 169, "country": "美国", "language": "英语"},
-            {"id": 10, "title": "海上钢琴师", "director": "朱塞佩·托纳多雷", "actors": ["蒂姆·罗斯"], 
-             "genre": "剧情/音乐", "year": 1998, "rating": 9.3, "description": "1900的故事", "duration": 125, "country": "意大利", "language": "英语"},
+            {"id": 1, "title": "肖申克的救赎", "director": "弗兰克·德拉邦特", "actors": ["蒂姆·罗宾斯", "摩根·弗里曼"], "genre": "剧情", "year": 1994, "rating": 9.7, "description": "希望让人自由"},
+            {"id": 2, "title": "霸王别姬", "director": "陈凯歌", "actors": ["张国荣", "张丰毅", "巩俐"], "genre": "剧情", "year": 1993, "rating": 9.6, "description": "风华绝代"},
+            {"id": 3, "title": "阿甘正传", "director": "罗伯特·泽米吉斯", "actors": ["汤姆·汉克斯"], "genre": "剧情", "year": 1994, "rating": 9.5, "description": "人生就像巧克力"},
+            {"id": 4, "title": "盗梦空间", "director": "克里斯托弗·诺兰", "actors": ["莱昂纳多"], "genre": "科幻/悬疑", "year": 2010, "rating": 9.4, "description": "梦境与现实"},
+            {"id": 5, "title": "星际穿越", "director": "克里斯托弗·诺兰", "actors": ["马修·麦康纳"], "genre": "科幻", "year": 2014, "rating": 9.4, "description": "穿越时空的爱"},
         ]
     
     def _generate_reviews(self):
@@ -905,35 +493,18 @@ class MovieDataManager:
                 sentiment = random.choice(["positive", "neutral", "negative"])
                 text = random.choice(DOUBAN_REAL_REVIEWS[sentiment])
                 rating = 5 if sentiment == "positive" else (3 if sentiment == "neutral" else 2)
-                
-                reviews.append({
-                    "movie_id": movie["id"],
-                    "movie_name": movie["title"],
-                    "user": random.choice(USER_NAMES) + str(random.randint(100, 999)),
-                    "content": text,
-                    "rating": rating,
-                    "sentiment": sentiment,
-                    "time": datetime.now().strftime("%Y-%m-%d")
-                })
+                reviews.append({"movie_id": movie["id"], "movie_name": movie["title"], "user": random.choice(USER_NAMES), "content": text, "rating": rating, "sentiment": sentiment, "time": datetime.now().strftime("%Y-%m-%d")})
         return reviews
     
     def _generate_users(self):
         users = {}
         for i in range(1, 21):
             user_id = f"user_{i:03d}"
-            watched = random.sample(self.movies, random.randint(3, 6))
-            users[user_id] = {
-                "watched": [m["id"] for m in watched],
-                "ratings": {m["id"]: random.randint(6, 10) for m in watched},
-                "favorites": [],
-                "watchlist": []
-            }
+            watched = random.sample(self.movies, random.randint(3, 5))
+            users[user_id] = {"watched": [m["id"] for m in watched], "ratings": {m["id"]: random.randint(6, 10) for m in watched}, "favorites": [], "watchlist": [], "user_info": {}}
         return users
     
     def get_system_reviews(self, movie_id):
-        movie = next((m for m in self.movies if m["id"] == movie_id), None)
-        if not movie:
-            return []
         return [r for r in self.reviews if r["movie_id"] == movie_id]
     
     def get_crawled_reviews(self, movie_name):
@@ -942,859 +513,824 @@ class MovieDataManager:
     def get_uploaded_reviews(self, movie_name):
         return self.uploaded_reviews.get(movie_name, [])
     
-    def crawl_movie_reviews(self, movie_name, max_count, progress_callback=None):
-        if not self.spider:
-            return None, "爬虫库未安装"
-        
-        try:
-            movie_id, full_title = self.spider.search_movie_id(movie_name)
-            if not movie_id:
-                return None, f"未找到电影: {movie_name}"
-            
-            self.spider.ml_analyzer = self.sentiment_analyzer
-            
-            reviews = self.spider.crawl_reviews(movie_id, max_count, progress_callback)
-            
-            if not reviews:
-                return None, f"未爬取到评论"
-            
-            self.crawled_reviews[full_title] = reviews
-            return reviews, full_title
-            
-        except Exception as e:
-            return None, f"爬取失败: {str(e)}"
-    
-    def train_recommender(self):
-        """训练推荐模型"""
-        # 准备用户交互数据
-        user_interactions = {}
-        for user_id, user_data in self.users.items():
-            interactions = {}
-            for movie_id, rating in user_data["ratings"].items():
-                interactions[movie_id] = rating
-            if interactions:
-                user_interactions[user_id] = interactions
-        
-        # 准备电影列表
-        all_movies = self.movies.copy()
-        for movie in LOCAL_MOVIE_CACHE.values():
-            if not any(m["id"] == int(movie["id"]) for m in all_movies):
-                all_movies.append({
-                    "id": int(movie["id"]),
-                    "title": movie["title"],
-                    "director": movie["director"],
-                    "actors": movie["actors"],
-                    "genre": movie["genre"],
-                    "year": int(movie["year"]),
-                    "rating": float(movie["rating"]),
-                    "description": movie["description"],
-                    "duration": movie["duration"],
-                    "country": movie["country"],
-                    "language": movie["language"]
-                })
-        
-        # 训练
-        success = self.recommender.train(user_interactions, all_movies, epochs=30)
-        if success:
-            self.recommender_trained = True
-        return success
-    
-    def get_recommendations(self, user_id, top_n=5):
-        """获取推荐列表"""
-        user = self.users.get(user_id, {"ratings": {}, "watched": []})
-        
-        # 准备所有电影
-        all_movies = []
-        for movie in self.movies:
-            all_movies.append({
-                "id": movie["id"],
-                "title": movie["title"],
-                "director": movie["director"],
-                "actors": movie["actors"],
-                "genre": movie["genre"],
-                "year": movie["year"],
-                "rating": movie["rating"],
-                "description": movie["description"]
-            })
-        
-        # 添加本地缓存电影
-        for movie in LOCAL_MOVIE_CACHE.values():
-            if not any(m["id"] == int(movie["id"]) for m in all_movies):
-                all_movies.append({
-                    "id": int(movie["id"]),
-                    "title": movie["title"],
-                    "director": movie["director"],
-                    "actors": movie["actors"],
-                    "genre": movie["genre"],
-                    "year": int(movie["year"]),
-                    "rating": float(movie["rating"]),
-                    "description": movie["description"]
-                })
-        
-        # 获取推荐
-        recommendations = self.recommender.recommend(user_id, all_movies, user["ratings"], top_n)
-        return recommendations
-    
     def search_movie_info(self, movie_name):
         result = {"success": False, "data": None, "message": "", "suggestions": []}
-        
         if movie_name in LOCAL_MOVIE_CACHE:
             cached = LOCAL_MOVIE_CACHE[movie_name]
             result["success"] = True
-            result["data"] = {
-                "title": cached["title"],
-                "year": cached["year"],
-                "rating": cached["rating"],
-                "director": cached["director"],
-                "actors": cached["actors"],
-                "genre": cached["genre"],
-                "country": cached.get("country", "未知"),
-                "language": cached.get("language", "未知"),
-                "duration": cached.get("duration", "未知"),
-                "description": cached.get("description", f"经典电影《{cached['title']}》，豆瓣评分{cached['rating']}分"),
-                "source": "本地缓存"
-            }
-            result["message"] = f"从本地缓存找到电影: {movie_name}"
+            result["data"] = {"title": cached["title"], "year": cached["year"], "rating": cached["rating"], "director": cached["director"], "actors": cached["actors"], "genre": cached["genre"], "description": cached["description"], "source": "本地缓存"}
             return result
-        
         best_match, score = fuzzy_match_movie(movie_name)
         if best_match and score > 0.6:
             cached = LOCAL_MOVIE_CACHE[best_match]
             result["success"] = True
-            result["data"] = {
-                "title": cached["title"],
-                "year": cached["year"],
-                "rating": cached["rating"],
-                "director": cached["director"],
-                "actors": cached["actors"],
-                "genre": cached["genre"],
-                "country": cached.get("country", "未知"),
-                "language": cached.get("language", "未知"),
-                "duration": cached.get("duration", "未知"),
-                "description": cached.get("description", f"经典电影《{cached['title']}》，豆瓣评分{cached['rating']}分"),
-                "source": f"本地缓存(模糊匹配，相似度:{score:.0%})"
-            }
-            result["message"] = f"通过模糊匹配找到: {best_match} (相似度: {score:.0%})"
+            result["data"] = {"title": cached["title"], "year": cached["year"], "rating": cached["rating"], "director": cached["director"], "actors": cached["actors"], "genre": cached["genre"], "description": cached["description"], "source": f"模糊匹配({score:.0%})"}
             return result
-        
-        if self.spider:
-            try:
-                movie_id, title = self.spider.search_movie_id(movie_name)
-                if movie_id:
-                    detail = self.spider.get_movie_detail(movie_id)
-                    if detail:
-                        result["success"] = True
-                        result["data"] = {
-                            "title": title,
-                            "year": detail.get("year", "未知"),
-                            "rating": detail.get("rating", "暂无"),
-                            "director": detail.get("director", "未知"),
-                            "actors": detail.get("actors", ["未知"]),
-                            "genre": "/".join(detail.get("genres", ["未知"])),
-                            "country": detail.get("country", "未知"),
-                            "language": detail.get("language", "未知"),
-                            "duration": detail.get("duration", "未知"),
-                            "description": detail.get("summary", "暂无简介"),
-                            "votes": detail.get("votes", "0"),
-                            "source": "豆瓣搜索"
-                        }
-                        result["message"] = f"从豆瓣找到电影: {title}"
-                        return result
-            except Exception as e:
-                print(f"豆瓣搜索异常: {e}")
-        
-        suggestions = []
-        for cached_name in LOCAL_MOVIE_CACHE.keys():
-            if movie_name.lower() in cached_name.lower() or cached_name.lower() in movie_name.lower():
-                suggestions.append(cached_name)
-        
+        suggestions = [name for name in LOCAL_MOVIE_CACHE.keys() if movie_name.lower() in name.lower() or name.lower() in movie_name.lower()]
         if suggestions:
             result["suggestions"] = suggestions[:5]
-            result["message"] = f"未找到《{movie_name}》，您是不是想找: {', '.join(suggestions[:3])}"
-        else:
-            result["message"] = f"未找到电影《{movie_name}》，请尝试使用完整电影名称或选择内置电影"
-        
+        result["message"] = f"未找到《{movie_name}》"
         return result
     
-    def parse_uploaded_file(self, file_path, movie_name):
-        file_ext = os.path.splitext(file_path)[1].lower()
-        
-        if file_ext == '.json':
-            return self._parse_json_file(file_path, movie_name)
-        elif file_ext == '.csv':
-            return self._parse_csv_file(file_path, movie_name)
-        elif file_ext == '.txt':
-            return self._parse_txt_file(file_path, movie_name)
-        elif file_ext in ['.xlsx', '.xls']:
-            try:
-                import openpyxl
-                return self._parse_excel_file(file_path, movie_name)
-            except:
-                raise Exception("Excel支持未安装，请运行: pip install openpyxl")
-        else:
-            raise Exception(f"不支持的文件格式: {file_ext}")
+    def get_all_data_sources(self):
+        return {"system": [{"name": m["title"], "count": len(self.get_system_reviews(m["id"]))} for m in self.movies],
+                "crawled": [{"name": name, "count": len(reviews)} for name, reviews in self.crawled_reviews.items()],
+                "uploaded": [{"name": name, "count": len(reviews)} for name, reviews in self.uploaded_reviews.items()]}
     
-    def _parse_json_file(self, file_path, movie_name):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        reviews = []
-        if isinstance(data, list):
-            for item in data:
-                content = item.get('评论内容', item.get('content', ''))
-                user = item.get('用户', item.get('user', ''))
-                rating = item.get('评分', item.get('rating', 3))
-                if content:
-                    reviews.append({
-                        "content": content,
-                        "user": user,
-                        "rating": rating
-                    })
-        elif isinstance(data, dict):
-            for key in data:
-                if '评论' in key or 'review' in key.lower():
-                    items = data[key]
-                    if isinstance(items, list):
-                        for item in items:
-                            if isinstance(item, dict):
-                                content = item.get('评论内容', item.get('content', ''))
-                                user = item.get('用户', item.get('user', ''))
-                                rating = item.get('评分', item.get('rating', 3))
-                                if content:
-                                    reviews.append({
-                                        "content": content,
-                                        "user": user,
-                                        "rating": rating
-                                    })
-                            elif isinstance(item, str):
-                                reviews.append({
-                                    "content": item,
-                                    "user": "",
-                                    "rating": 3
-                                })
-        
-        if not reviews:
-            raise Exception("JSON文件中没有找到有效的评论数据")
-        
-        return reviews, movie_name
-    
-    def _parse_csv_file(self, file_path, movie_name):
-        df = pd.read_csv(file_path, encoding='utf-8')
-        
-        reviews = []
-        for _, row in df.iterrows():
-            content = None
-            for col in ['评论内容', 'content', '评论', 'text']:
-                if col in df.columns:
-                    content = row[col]
-                    break
-            
-            if not content or pd.isna(content):
-                continue
-            
-            user = None
-            for col in ['用户', 'user', 'username']:
-                if col in df.columns:
-                    user = row[col]
-                    break
-            
-            rating = 3
-            for col in ['评分', 'rating', 'score']:
-                if col in df.columns and not pd.isna(row[col]):
-                    try:
-                        rating = int(float(row[col]))
-                        rating = max(1, min(5, rating))
-                    except:
-                        pass
-                    break
-            
-            reviews.append({
-                "content": str(content),
-                "user": str(user) if user else "",
-                "rating": rating
-            })
-        
-        if not reviews:
-            raise Exception("CSV文件中没有找到有效的评论数据")
-        
-        return reviews, movie_name
-    
-    def _parse_txt_file(self, file_path, movie_name):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = [line.strip() for line in f.readlines() if line.strip()]
-        
-        if not lines:
-            raise Exception("文件为空")
-        
-        reviews = []
-        for line in lines:
-            if '|' in line:
-                parts = line.split('|')
-                if len(parts) >= 2:
-                    user = parts[0].strip()
-                    content = parts[1].strip()
-                    rating = int(parts[2].strip()) if len(parts) >= 3 else 3
-                    reviews.append({
-                        "content": content,
-                        "user": user,
-                        "rating": rating
-                    })
-                else:
-                    reviews.append({
-                        "content": line,
-                        "user": "",
-                        "rating": 3
-                    })
-            else:
-                reviews.append({
-                    "content": line,
-                    "user": "",
-                    "rating": 3
-                })
-        
-        return reviews, movie_name
-    
-    def _parse_excel_file(self, file_path, movie_name):
-        import openpyxl
-        wb = openpyxl.load_workbook(file_path, data_only=True)
-        sheet = wb.active
-        
-        headers = []
-        for col in range(1, sheet.max_column + 1):
-            val = sheet.cell(row=1, column=col).value
-            if val:
-                headers.append(str(val).strip())
-        
-        content_col = None
-        user_col = None
-        rating_col = None
-        
-        for i, header in enumerate(headers):
-            header_lower = header.lower()
-            if header_lower in ['评论内容', 'content', '评论', 'text']:
-                content_col = i
-            if header_lower in ['用户', 'user', 'username']:
-                user_col = i
-            if header_lower in ['评分', 'rating', 'score']:
-                rating_col = i
-        
-        if content_col is None:
-            raise Exception("Excel文件必须包含评论内容列")
-        
-        reviews = []
-        for row in range(2, sheet.max_row + 1):
-            content = sheet.cell(row=row, column=content_col + 1).value
-            if not content:
-                continue
-            
-            content = str(content).strip()
-            
-            user = ""
-            if user_col is not None:
-                user_val = sheet.cell(row=row, column=user_col + 1).value
-                if user_val:
-                    user = str(user_val)
-            
-            rating = 3
-            if rating_col is not None:
-                rating_val = sheet.cell(row=row, column=rating_col + 1).value
-                if rating_val:
-                    try:
-                        rating = int(float(rating_val))
-                        rating = max(1, min(5, rating))
-                    except:
-                        pass
-            
-            reviews.append({
-                "content": content,
-                "user": user,
-                "rating": rating
-            })
-        
-        if not reviews:
-            raise Exception("Excel文件中没有找到有效的评论数据")
-        
-        return reviews, movie_name
-    
-    def upload_reviews(self, file, movie_name):
+    def upload_user_data(self, file):
+        """上传并解析用户数据文件 - 支持Excel和CSV格式"""
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
         try:
-            reviews, movie_name = self.parse_uploaded_file(file_path, movie_name)
+            file_ext = os.path.splitext(filename)[1].lower()
             
-            texts = [r['content'] for r in reviews]
-            results = self.sentiment_analyzer.predict_batch(texts)
+            if file_ext == '.csv':
+                encodings = ['utf-8', 'utf-8-sig', 'gbk', 'gb2312', 'gb18030', 'latin-1']
+                df = None
+                for encoding in encodings:
+                    try:
+                        df = pd.read_csv(file_path, encoding=encoding)
+                        break
+                    except:
+                        continue
+                if df is None:
+                    raise Exception("无法解析CSV文件")
+                
+            elif file_ext in ['.xlsx', '.xls']:
+                try:
+                    if file_ext == '.xlsx':
+                        df = pd.read_excel(file_path, engine='openpyxl')
+                    else:
+                        try:
+                            df = pd.read_excel(file_path, engine='xlrd')
+                        except:
+                            df = pd.read_excel(file_path)
+                except Exception as e:
+                    raise Exception(f"Excel文件解析失败: {str(e)}")
+            else:
+                raise Exception(f"不支持的文件格式: {file_ext}")
             
-            for i, review in enumerate(reviews):
-                review['sentiment'] = results[i]['sentiment']
-                review['confidence'] = results[i]['confidence']
-                review['time'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            return self._auto_detect_and_parse(df, filename, file_ext)
             
-            self.uploaded_reviews[movie_name] = reviews
-            return reviews, movie_name
-            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
         finally:
             if os.path.exists(file_path):
                 os.remove(file_path)
     
-    def train_sentiment_model(self):
-        texts = []
-        labels = []
+    def _auto_detect_and_parse(self, df, filename, file_ext='.xlsx'):
+        """自动检测文件格式并解析"""
+        columns = df.columns.tolist()
+        columns_lower = [c.lower() for c in columns]
         
-        for sentiment, reviews in DOUBAN_REAL_REVIEWS.items():
-            for review in reviews:
-                texts.append(review)
-                labels.append(sentiment)
+        if '电影名称' in columns or 'movie_name' in columns_lower:
+            return self._parse_long_format(df, filename, file_ext)
         
-        train_dataset, val_dataset, test_dataset = self.sentiment_analyzer.prepare_data(texts, labels)
+        if any('电影' in c and ('名称' in c or '名' in c) for c in columns):
+            return self._parse_long_format(df, filename, file_ext)
         
-        self.sentiment_analyzer.build_model()
-        self.sentiment_analyzer.train(train_dataset, val_dataset, epochs=15)
+        if '观影内容' in columns or 'watch_content' in columns_lower:
+            return self._parse_wide_format(df, filename, file_ext)
         
-        self.sentiment_analyzer.save_model()
+        if '用户昵称' in columns and ('电影' in columns or any('电影' in c for c in columns)):
+            return self._parse_simple_format(df, filename, file_ext)
         
-        return True
+        return self._parse_long_format(df, filename, file_ext)
     
-    def get_all_data_sources(self):
-        sources = {
-            "system": [{"name": m["title"], "type": "system", "count": len(self.get_system_reviews(m["id"]))} for m in self.movies],
-            "crawled": [{"name": name, "type": "crawled", "count": len(reviews)} for name, reviews in self.crawled_reviews.items()],
-            "uploaded": [{"name": name, "type": "uploaded", "count": len(reviews)} for name, reviews in self.uploaded_reviews.items()]
+    def _parse_long_format(self, df, filename, file_ext='.xlsx'):
+        """解析长格式数据"""
+        col_map = {
+            'nickname': None, 'gender': None, 'age': None,
+            'movie_name': None, 'watch_date': None, 'movie_type': None,
+            'movie_rating': None, 'director': None, 'actors': None,
+            'watch_channel': None, 'remark': None
         }
-        return sources
+        
+        for col in df.columns:
+            col_lower = col.lower()
+            if '用户昵称' in col or '昵称' in col or col_lower == 'nickname':
+                col_map['nickname'] = col
+            elif '性别' in col or col_lower == 'gender':
+                col_map['gender'] = col
+            elif '年龄' in col or col_lower == 'age':
+                col_map['age'] = col
+            elif '电影名称' in col or '电影名' in col or col_lower == 'movie_name':
+                col_map['movie_name'] = col
+            elif '观影日期' in col or '日期' in col or col_lower == 'watch_date':
+                col_map['watch_date'] = col
+            elif '电影类型' in col or '类型' in col or col_lower == 'movie_type':
+                col_map['movie_type'] = col
+            elif '电影评分' in col or '评分' in col or col_lower == 'movie_rating':
+                col_map['movie_rating'] = col
+            elif '导演' in col or col_lower == 'director':
+                col_map['director'] = col
+            elif '主演' in col or '演员' in col or col_lower == 'actors':
+                col_map['actors'] = col
+            elif '观影渠道' in col or '渠道' in col or col_lower == 'watch_channel':
+                col_map['watch_channel'] = col
+            elif '备注' in col or col_lower == 'remark':
+                col_map['remark'] = col
+        
+        if not col_map['nickname']:
+            raise Exception("缺少用户昵称列")
+        if not col_map['movie_name']:
+            raise Exception("缺少电影名称列")
+        
+        user_summary = {}
+        movie_records = []
+        
+        for idx, row in df.iterrows():
+            nickname = str(row.get(col_map['nickname'], '')).strip()
+            if not nickname or nickname == 'nan' or nickname == 'None':
+                continue
+            
+            movie_name = str(row.get(col_map['movie_name'], '')).strip()
+            if not movie_name or movie_name == 'nan' or movie_name == 'None':
+                continue
+            
+            gender = '未知'
+            if col_map['gender'] and pd.notna(row.get(col_map['gender'])):
+                gender_val = str(row.get(col_map['gender'])).strip()
+                if gender_val and gender_val != 'nan':
+                    gender = gender_val
+            
+            age = 0
+            if col_map['age'] and pd.notna(row.get(col_map['age'])):
+                try:
+                    age_val = row.get(col_map['age'])
+                    age = int(float(age_val)) if age_val else 0
+                except:
+                    age = 0
+            
+            movie_record = {
+                'nickname': nickname, 'gender': gender, 'age': age,
+                'movie_name': movie_name,
+                'watch_date': str(row.get(col_map['watch_date'], '')) if col_map['watch_date'] and pd.notna(row.get(col_map['watch_date'])) else '',
+                'movie_type': str(row.get(col_map['movie_type'], '')) if col_map['movie_type'] and pd.notna(row.get(col_map['movie_type'])) else '',
+                'movie_rating': float(row.get(col_map['movie_rating'], 0)) if col_map['movie_rating'] and pd.notna(row.get(col_map['movie_rating'])) else 0,
+                'director': str(row.get(col_map['director'], '')) if col_map['director'] and pd.notna(row.get(col_map['director'])) else '',
+                'actors': str(row.get(col_map['actors'], '')) if col_map['actors'] and pd.notna(row.get(col_map['actors'])) else '',
+                'watch_channel': str(row.get(col_map['watch_channel'], '')) if col_map['watch_channel'] and pd.notna(row.get(col_map['watch_channel'])) else '',
+                'remark': str(row.get(col_map['remark'], '')) if col_map['remark'] and pd.notna(row.get(col_map['remark'])) else ''
+            }
+            movie_records.append(movie_record)
+            
+            if nickname not in user_summary:
+                user_summary[nickname] = {
+                    'nickname': nickname, 'gender': gender, 'age': age,
+                    'movies': [], 'watch_dates': [], 'movie_types': [],
+                    'ratings': [], 'directors': [], 'watch_count': 0
+                }
+            
+            user_summary[nickname]['movies'].append(movie_name)
+            if movie_record['watch_date']:
+                user_summary[nickname]['watch_dates'].append(movie_record['watch_date'])
+            if movie_record['movie_type']:
+                user_summary[nickname]['movie_types'].append(movie_record['movie_type'])
+            if movie_record['movie_rating'] > 0:
+                user_summary[nickname]['ratings'].append(movie_record['movie_rating'])
+            if movie_record['director']:
+                user_summary[nickname]['directors'].append(movie_record['director'])
+            user_summary[nickname]['watch_count'] += 1
+        
+        if not user_summary:
+            raise Exception("没有找到有效的用户数据")
+        
+        analysis_records = []
+        for nickname, summary in user_summary.items():
+            type_counter = Counter()
+            for t in summary['movie_types']:
+                if t:
+                    import re
+                    genres = re.split('[,，、/;；]', str(t))
+                    for genre in genres:
+                        genre = genre.strip()
+                        if genre:
+                            type_counter[genre] += 1
+            
+            analysis_records.append({
+                'nickname': nickname, 'gender': summary['gender'], 'age': summary['age'],
+                'watch_count': summary['watch_count'],
+                'watch_content': ','.join(summary['movies']),
+                'watch_time': ','.join(summary['watch_dates']),
+                'watch_genre': ','.join([t for t in summary['movie_types'] if t]),
+                'avg_rating': sum(summary['ratings']) / len(summary['ratings']) if summary['ratings'] else 0,
+                'top_genres': dict(type_counter.most_common(5)),
+                'top_director': Counter(summary['directors']).most_common(1)[0][0] if summary['directors'] else ''
+            })
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        data_id = f"user_data_{timestamp}"
+        self.uploaded_user_data[data_id] = {
+            'filename': filename, 'file_type': file_ext,
+            'upload_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'records': analysis_records, 'raw_records': movie_records,
+            'total_users': len(analysis_records), 'total_movies': len(movie_records),
+            'format': 'long'
+        }
+        
+        return {'success': True, 'data_id': data_id, 'total_users': len(analysis_records),
+                'total_movies': len(movie_records), 'preview': movie_records[:10]}
+    
+    def _parse_wide_format(self, df, filename, file_ext='.xlsx'):
+        """解析宽格式数据"""
+        col_map = {'nickname': None, 'gender': None, 'age': None,
+                   'watch_count': None, 'watch_content': None, 'watch_time': None, 'watch_genre': None}
+        
+        for col in df.columns:
+            col_lower = col.lower()
+            if '用户昵称' in col or '昵称' in col or col_lower == 'nickname':
+                col_map['nickname'] = col
+            elif '性别' in col or col_lower == 'gender':
+                col_map['gender'] = col
+            elif '年龄' in col or col_lower == 'age':
+                col_map['age'] = col
+            elif '观影数量' in col or '数量' in col or col_lower == 'watch_count':
+                col_map['watch_count'] = col
+            elif '观影内容' in col or '内容' in col or col_lower == 'watch_content':
+                col_map['watch_content'] = col
+            elif '观影时间' in col or '时间' in col or col_lower == 'watch_time':
+                col_map['watch_time'] = col
+            elif '观影类型' in col or '类型' in col or col_lower == 'watch_genre':
+                col_map['watch_genre'] = col
+        
+        if not col_map['nickname']:
+            raise Exception("缺少用户昵称列")
+        
+        user_records = []
+        for idx, row in df.iterrows():
+            nickname = str(row.get(col_map['nickname'], '')).strip()
+            if not nickname or nickname == 'nan' or nickname == 'None':
+                continue
+            
+            gender = '未知'
+            if col_map['gender'] and pd.notna(row.get(col_map['gender'])):
+                gender_val = str(row.get(col_map['gender'])).strip()
+                if gender_val and gender_val != 'nan':
+                    gender = gender_val
+            
+            age = 0
+            if col_map['age'] and pd.notna(row.get(col_map['age'])):
+                try:
+                    age = int(float(row.get(col_map['age'])))
+                except:
+                    age = 0
+            
+            watch_count = 0
+            if col_map['watch_count'] and pd.notna(row.get(col_map['watch_count'])):
+                try:
+                    watch_count = int(float(row.get(col_map['watch_count'])))
+                except:
+                    watch_count = 0
+            
+            record = {
+                'nickname': nickname, 'gender': gender, 'age': age,
+                'watch_count': watch_count,
+                'watch_content': str(row.get(col_map['watch_content'], '')) if col_map['watch_content'] and pd.notna(row.get(col_map['watch_content'])) else '',
+                'watch_time': str(row.get(col_map['watch_time'], '')) if col_map['watch_time'] and pd.notna(row.get(col_map['watch_time'])) else '',
+                'watch_genre': str(row.get(col_map['watch_genre'], '')) if col_map['watch_genre'] and pd.notna(row.get(col_map['watch_genre'])) else ''
+            }
+            user_records.append(record)
+        
+        if not user_records:
+            raise Exception("没有找到有效的用户数据")
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        data_id = f"user_data_{timestamp}"
+        self.uploaded_user_data[data_id] = {
+            'filename': filename, 'file_type': file_ext,
+            'upload_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'records': user_records, 'total_users': len(user_records), 'format': 'wide'
+        }
+        
+        return {'success': True, 'data_id': data_id, 'total_users': len(user_records), 'preview': user_records[:10]}
+    
+    def _parse_simple_format(self, df, filename, file_ext='.xlsx'):
+        """解析简化格式"""
+        movie_cols = [c for c in df.columns if '电影' in c or 'movie' in c.lower()]
+        if not movie_cols:
+            raise Exception("未找到电影相关列")
+        
+        col_nickname = None
+        for col in df.columns:
+            if '用户昵称' in col or '昵称' in col or col.lower() == 'nickname':
+                col_nickname = col
+                break
+        
+        if not col_nickname:
+            raise Exception("缺少用户昵称列")
+        
+        user_records = []
+        for idx, row in df.iterrows():
+            nickname = str(row.get(col_nickname, '')).strip()
+            if not nickname or nickname == 'nan' or nickname == 'None':
+                continue
+            
+            movies = []
+            for col in movie_cols:
+                val = row.get(col, '')
+                if pd.notna(val) and str(val).strip() and str(val).strip() != 'nan':
+                    movies.append(str(val).strip())
+            
+            if not movies:
+                continue
+            
+            record = {
+                'nickname': nickname, 'gender': '未知', 'age': 0,
+                'watch_count': len(movies), 'watch_content': ','.join(movies),
+                'watch_time': '', 'watch_genre': ''
+            }
+            user_records.append(record)
+        
+        if not user_records:
+            raise Exception("没有找到有效的用户数据")
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        data_id = f"user_data_{timestamp}"
+        self.uploaded_user_data[data_id] = {
+            'filename': filename, 'file_type': file_ext,
+            'upload_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'records': user_records, 'total_users': len(user_records), 'format': 'simple'
+        }
+        
+        return {'success': True, 'data_id': data_id, 'total_users': len(user_records), 'preview': user_records[:10]}
+    
+    def analyze_user_data(self, data_id):
+        """分析用户数据"""
+        if data_id not in self.uploaded_user_data:
+            return None
+        
+        data = self.uploaded_user_data[data_id]
+        records = data['records']
+        
+        total_users = len(records)
+        
+        gender_count = Counter([r.get('gender', '未知') for r in records])
+        
+        ages = [r.get('age', 0) for r in records if r.get('age', 0) > 0]
+        avg_age = sum(ages) / len(ages) if ages else 0
+        
+        watch_counts = [r.get('watch_count', 0) for r in records]
+        avg_watch = sum(watch_counts) / len(watch_counts) if watch_counts else 0
+        max_watch = max(watch_counts) if watch_counts else 0
+        
+        genre_prefs = []
+        for r in records:
+            genre_str = r.get('watch_genre', '')
+            if genre_str:
+                import re
+                genres = re.split('[,，、/;；]', str(genre_str))
+                genre_prefs.extend([g.strip() for g in genres if g.strip()])
+        genre_count = Counter(genre_prefs)
+        
+        age_groups = {'18岁以下': 0, '18-25岁': 0, '26-35岁': 0, '36-50岁': 0, '50岁以上': 0}
+        for r in records:
+            age = r.get('age', 0)
+            if age <= 0:
+                continue
+            elif age < 18:
+                age_groups['18岁以下'] += 1
+            elif age <= 25:
+                age_groups['18-25岁'] += 1
+            elif age <= 35:
+                age_groups['26-35岁'] += 1
+            elif age <= 50:
+                age_groups['36-50岁'] += 1
+            else:
+                age_groups['50岁以上'] += 1
+        
+        movie_titles = []
+        for r in records:
+            content = r.get('watch_content', '')
+            if content:
+                import re
+                movies = re.split('[,，、/;；]', str(content))
+                movie_titles.extend([m.strip() for m in movies if m.strip()])
+        popular_movies = Counter(movie_titles).most_common(10)
+        
+        # 生成图表
+        fig1, ax1 = plt.subplots(figsize=(8, 5))
+        ax1.bar(list(age_groups.keys()), list(age_groups.values()), color=['#667eea', '#48bb78', '#4299e1', '#ecc94b', '#f56565'])
+        ax1.set_title('用户年龄分布', fontsize=14, fontweight='bold')
+        buffer1 = BytesIO()
+        fig1.savefig(buffer1, format='png', dpi=100, bbox_inches='tight')
+        buffer1.seek(0)
+        age_chart = base64.b64encode(buffer1.getvalue()).decode('utf-8')
+        plt.close(fig1)
+        
+        fig2, ax2 = plt.subplots(figsize=(6, 6))
+        colors = ['#48bb78', '#4299e1', '#ecc94b', '#f56565']
+        ax2.pie(list(gender_count.values()), labels=list(gender_count.keys()), autopct='%1.1f%%', colors=colors[:len(gender_count)])
+        ax2.set_title('用户性别分布', fontsize=14, fontweight='bold')
+        buffer2 = BytesIO()
+        fig2.savefig(buffer2, format='png', dpi=100, bbox_inches='tight')
+        buffer2.seek(0)
+        gender_chart = base64.b64encode(buffer2.getvalue()).decode('utf-8')
+        plt.close(fig2)
+        
+        fig3, ax3 = plt.subplots(figsize=(10, 6))
+        top_genres = genre_count.most_common(8)
+        if top_genres:
+            ax3.barh([g[0] for g in top_genres], [g[1] for g in top_genres], color='#667eea')
+            ax3.set_title('观影类型偏好 Top8', fontsize=14, fontweight='bold')
+        else:
+            ax3.text(0.5, 0.5, '暂无类型数据', ha='center', va='center', transform=ax3.transAxes)
+        buffer3 = BytesIO()
+        fig3.savefig(buffer3, format='png', dpi=100, bbox_inches='tight')
+        buffer3.seek(0)
+        genre_chart = base64.b64encode(buffer3.getvalue()).decode('utf-8')
+        plt.close(fig3)
+        
+        fig4, ax4 = plt.subplots(figsize=(10, 6))
+        ax4.hist(watch_counts, bins=min(20, len(set(watch_counts))), color='#48bb78', edgecolor='white', alpha=0.7)
+        ax4.set_title('观影数量分布', fontsize=14, fontweight='bold')
+        buffer4 = BytesIO()
+        fig4.savefig(buffer4, format='png', dpi=100, bbox_inches='tight')
+        buffer4.seek(0)
+        watch_chart = base64.b64encode(buffer4.getvalue()).decode('utf-8')
+        plt.close(fig4)
+        
+        return {
+            'success': True, 'data_id': data_id, 'filename': data['filename'],
+            'file_type': data.get('file_type', '.xlsx'), 'upload_time': data['upload_time'],
+            'total_users': total_users, 'total_movies': data.get('total_movies', sum(watch_counts)),
+            'gender_dist': dict(gender_count), 'avg_age': round(avg_age, 1),
+            'age_groups': age_groups, 'avg_watch': round(avg_watch, 1), 'max_watch': max_watch,
+            'genre_prefs': dict(genre_count.most_common(10)), 'popular_movies': popular_movies,
+            'age_chart': age_chart, 'gender_chart': gender_chart,
+            'genre_chart': genre_chart, 'watch_chart': watch_chart,
+            'sample_records': records[:5], 'format': data.get('format', 'wide')
+        }
+    
+    def get_user_genre_preferences(self, data_id):
+        """获取用户数据的类型偏好，用于电影盲盒"""
+        if data_id not in self.uploaded_user_data:
+            return None
+        
+        data = self.uploaded_user_data[data_id]
+        records = data['records']
+        
+        all_genres = []
+        genre_counter = Counter()
+        
+        for record in records:
+            genre_str = record.get('watch_genre', '')
+            if genre_str:
+                import re
+                genres = re.split('[,，、/;；]', str(genre_str))
+                for genre in genres:
+                    genre = genre.strip()
+                    if genre:
+                        all_genres.append(genre)
+                        genre_counter[genre] += 1
+        
+        # 类型对应的电影推荐库
+        genre_movies = {
+            "剧情": ["肖申克的救赎", "霸王别姬", "阿甘正传", "我不是药神", "绿皮书", "美丽人生", "放牛班的春天", "忠犬八公的故事"],
+            "科幻": ["星际穿越", "盗梦空间", "流浪地球", "黑客帝国", "阿凡达", "银翼杀手2049", "火星救援", "降临"],
+            "动作": ["让子弹飞", "速度与激情", "碟中谍", "叶问", "战狼2", "红海行动", "终结者", "黑客帝国"],
+            "爱情": ["泰坦尼克号", "怦然心动", "你的名字", "情书", "爱乐之城", "初恋这件小事", "剪刀手爱德华", "罗马假日"],
+            "喜剧": ["三傻大闹宝莱坞", "夏洛特烦恼", "唐人街探案", "疯狂的石头", "西虹市首富", "羞羞的铁拳", "人在囧途"],
+            "动画": ["千与千寻", "龙猫", "疯狂动物城", "寻梦环游记", "冰雪奇缘", "哪吒之魔童降世", "玩具总动员", "飞屋环游记"],
+            "悬疑": ["盗梦空间", "看不见的客人", "消失的爱人", "调音师", "误杀", "心迷宫", "致命ID", "禁闭岛"],
+            "奇幻": ["哈利波特", "指环王", "加勒比海盗", "纳尼亚传奇", "神奇动物在哪里", "潘神的迷宫", "大鱼海棠"],
+            "灾难": ["泰坦尼克号", "2012", "釜山行", "后天", "唐山大地震", "中国机长", "流感", "末日崩塌"],
+            "音乐": ["海上钢琴师", "放牛班的春天", "波西米亚狂想曲", "音乐之声", "再次出发", "爱乐之城", "寻梦环游记"],
+            "冒险": ["少年派的奇幻漂流", "荒野猎人", "夺宝奇兵", "地心历险记", "丛林奇航", "勇敢者游戏"],
+            "恐怖": ["招魂", "寂静岭", "午夜凶铃", "咒怨", "安娜贝尔", "遗传厄运"],
+            "犯罪": ["教父", "无间道", "肖申克的救赎", "低俗小说", "杀人回忆", "七宗罪", "搏击俱乐部"]
+        }
+        
+        top_genres = genre_counter.most_common(5)
+        
+        return {
+            'success': True,
+            'genre_preferences': dict(genre_counter),
+            'top_genres': top_genres,
+            'total_users': len(records),
+            'genre_movies': genre_movies,
+            'has_data': len(genre_counter) > 0
+        }
 
 
-# 创建全局数据管理器
 data_manager = MovieDataManager()
 
-# 尝试加载已有模型
-try:
-    data_manager.sentiment_analyzer.load_model()
-    print("✅ PyTorch情感分析模型加载成功")
-except:
-    print("⚠️ 未找到情感分析模型，请先训练模型")
-
-# 尝试训练推荐模型
-try:
-    data_manager.train_recommender()
-    print("✅ 神经网络推荐模型训练完成")
-except Exception as e:
-    print(f"⚠️ 推荐模型训练失败: {e}，将使用降级推荐")
-
 # ==================== 路由定义 ====================
+@app.route('/image.jpg')
+def serve_ai_image():
+    from flask import send_from_directory
+    import os
+    return send_from_directory('.', 'image.jpg')
 
+# ==================== 智谱AI聊天API ====================
+@app.route('/api/zhipu/chat', methods=['POST'])
+def api_zhipu_chat():
+    import requests
+    import json
+    
+    data = request.get_json()
+    message = data.get('message', '')
+    context = data.get('context', [])
+    
+    # 智谱AI配置
+    api_key = 'fa590162d40c41f8ae5df72e8abd8f01.2oR2NpYuuJVGKlE9'
+    app_id = '2036718063138881536'
+    
+    chat_url = "https://open.bigmodel.cn/api/llm-application/open/v3/application/invoke"
+    headers = {
+        "Authorization": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    # 构建消息历史
+    messages = []
+    for turn in context:
+        messages.append({"role": "user", "content": [{"type": "input", "value": turn["user"]}]})
+        messages.append({"role": "assistant", "content": [{"type": "input", "value": turn["bot"]}]})
+    messages.append({"role": "user", "content": [{"type": "input", "value": message}]})
+    
+    chat_data = {
+        "app_id": app_id,
+        "stream": False,
+        "messages": messages
+    }
+    
+    try:
+        print(f"发送到API的请求数据: {json.dumps(chat_data, ensure_ascii=False)}")
+        response = requests.post(chat_url, headers=headers, json=chat_data, timeout=60)
+        
+        if response.status_code == 200:
+            result = response.json()
+            full_response = ""
+            
+            # 解析响应 - 多种格式兼容
+            if 'choices' in result and len(result['choices']) > 0:
+                choice = result['choices'][0]
+                
+                if 'messages' in choice:
+                    msgs = choice['messages']
+                    if 'content' in msgs:
+                        content = msgs['content']
+                        if isinstance(content, dict) and 'msg' in content:
+                            full_response = content['msg']
+                        elif isinstance(content, str):
+                            full_response = content
+                
+                elif 'message' in choice:
+                    msg = choice['message']
+                    if 'content' in msg:
+                        content = msg['content']
+                        if isinstance(content, str):
+                            full_response = content
+                        elif isinstance(content, list) and len(content) > 0:
+                            for item in content:
+                                if isinstance(item, dict) and item.get('type') == 'text' and 'text' in item:
+                                    full_response = item['text']
+                                    break
+                elif 'delta' in choice and 'content' in choice['delta']:
+                    delta_content = choice['delta']['content']
+                    if isinstance(delta_content, str):
+                        full_response = delta_content
+                    elif isinstance(delta_content, dict):
+                        full_response = delta_content.get('msg') or delta_content.get('text') or delta_content.get('value', '')
+            
+            elif 'data' in result:
+                data_obj = result['data']
+                if isinstance(data_obj, dict):
+                    content = data_obj.get('content')
+                    if isinstance(content, str):
+                        full_response = content
+                    elif isinstance(content, list) and len(content) > 0:
+                        for item in content:
+                            if isinstance(item, dict) and item.get('type') == 'text' and 'text' in item:
+                                full_response = item['text']
+                                break
+                    else:
+                        full_response = data_obj.get('text') or data_obj.get('msg', '')
+                elif isinstance(data_obj, str):
+                    full_response = data_obj
+            
+            elif 'content' in result:
+                content = result['content']
+                if isinstance(content, str):
+                    full_response = content
+                elif isinstance(content, list) and len(content) > 0:
+                    for item in content:
+                        if isinstance(item, dict) and item.get('type') == 'text' and 'text' in item:
+                            full_response = item['text']
+                            break
+            
+            elif 'text' in result:
+                full_response = result['text']
+            
+            if full_response:
+                return jsonify({'success': True, 'response': full_response})
+            else:
+                return jsonify({'success': False, 'error': f'未获取到有效响应，原始响应: {json.dumps(result, ensure_ascii=False)}'})
+        else:
+            return jsonify({'success': False, 'error': f'API请求失败: {response.status_code}, 响应: {response.text}'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'异常: {str(e)}'})
+
+# 页面路由
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/data_collection')
-def data_collection():
-    movies = data_manager.movies
-    return render_template('data_collection.html', movies=movies)
-
-@app.route('/data_analysis')
-def data_analysis():
-    sources = data_manager.get_all_data_sources()
-    return render_template('data_analysis.html', sources=sources)
-
-@app.route('/movie_analysis')
-def movie_analysis():
-    movies = data_manager.movies
-    return render_template('movie_analysis.html', movies=movies)
+@app.route('/movie_analysis_hub')
+def movie_analysis_hub():
+    return render_template('movie_analysis_hub.html', movies=data_manager.movies)
 
 @app.route('/recommendation')
 def recommendation():
     return render_template('recommendation.html')
 
-@app.route('/ai_assistant')
-def ai_assistant():
-    return render_template('ai_assistant.html')
+@app.route('/social_hub')
+def social_hub():
+    return render_template('social_hub.html', user=data_manager.current_user)
 
-@app.route('/social')
-def social():
-    return render_template('social.html')
-
-@app.route('/user')
-def user():
-    return render_template('user.html', user=data_manager.current_user)
-
-# ==================== API接口 ====================
-
+# API路由
 @app.route('/api/get_data_sources', methods=['GET'])
 def api_get_data_sources():
-    sources = data_manager.get_all_data_sources()
-    return jsonify({'success': True, 'sources': sources})
+    return jsonify({'success': True, 'sources': data_manager.get_all_data_sources()})
 
 @app.route('/api/crawl_reviews', methods=['POST'])
 def api_crawl_reviews():
-    data = request.json
-    movie_name = data.get('movie_name')
-    max_count = int(data.get('max_count', 20))
-    
-    def progress_callback(current, total):
-        pass
-    
-    reviews, result = data_manager.crawl_movie_reviews(movie_name, max_count, progress_callback)
-    
-    if reviews:
-        return jsonify({
-            'success': True,
-            'reviews': reviews,
-            'movie_name': result,
-            'count': len(reviews)
-        })
-    else:
-        return jsonify({
-            'success': False,
-            'error': result
-        })
+    movie_name = request.json.get('movie_name')
+    max_count = int(request.json.get('max_count', 20))
+    if data_manager.spider:
+        movie_id, title = data_manager.spider.search_movie_id(movie_name)
+        if movie_id:
+            reviews = data_manager.spider.crawl_reviews(movie_id, max_count)
+            # 添加情感分析
+            for review in reviews:
+                sentiment, _ = data_manager.sentiment_analyzer.predict_sentiment(review['content'])
+                review['sentiment'] = sentiment
+            data_manager.crawled_reviews[title or movie_name] = reviews
+            return jsonify({'success': True, 'reviews': reviews, 'movie_name': title or movie_name, 'count': len(reviews)})
+    return jsonify({'success': False, 'error': '爬取失败'})
 
 @app.route('/api/search_movie', methods=['POST'])
 def api_search_movie():
-    data = request.json
-    movie_name = data.get('movie_name', '').strip()
-    
-    if not movie_name:
-        return jsonify({'success': False, 'error': '请输入电影名称'})
-    
-    result = data_manager.search_movie_info(movie_name)
-    return jsonify(result)
+    movie_name = request.json.get('movie_name', '').strip()
+    return jsonify(data_manager.search_movie_info(movie_name))
 
 @app.route('/api/recommend', methods=['POST'])
 def api_recommend():
-    """神经网络推荐接口"""
-    data = request.json
-    user_id = data.get('user_id', data_manager.current_user)
-    top_n = int(data.get('top_n', 5))
-    
-    try:
-        recommendations = data_manager.get_recommendations(user_id, top_n)
-        
-        # 格式化返回结果
-        result = []
-        for rec in recommendations:
-            movie = rec["movie"]
-            result.append({
-                "id": movie["id"],
-                "title": movie["title"],
-                "director": movie["director"],
-                "actors": movie["actors"],
-                "genre": movie["genre"],
-                "year": movie["year"],
-                "rating": movie["rating"],
-                "description": movie["description"],
-                "score": round(rec["score"], 2)
-            })
-        
-        return jsonify({
-            'success': True,
-            'recommendations': result,
-            'method': '神经网络推荐 (协同过滤 + 内容特征)',
-            'user_id': user_id
-        })
-    except Exception as e:
-        # 降级推荐
-        user = data_manager.users.get(user_id, {"ratings": {}, "watched": []})
-        watched = set(user["watched"])
-        
-        recs = [m for m in data_manager.movies if m["id"] not in watched]
-        recs.sort(key=lambda x: x["rating"], reverse=True)
-        
-        fallback_result = []
-        for m in recs[:top_n]:
-            fallback_result.append({
-                "id": m["id"],
-                "title": m["title"],
-                "director": m["director"],
-                "actors": m["actors"],
-                "genre": m["genre"],
-                "year": m["year"],
-                "rating": m["rating"],
-                "description": m["description"],
-                "score": m["rating"]
-            })
-        
-        return jsonify({
-            'success': True,
-            'recommendations': fallback_result,
-            'method': '降级推荐 (基于评分)',
-            'warning': str(e)
-        })
-
-@app.route('/api/train_recommender', methods=['POST'])
-def api_train_recommender():
-    """训练推荐模型"""
-    try:
-        success = data_manager.train_recommender()
-        if success:
-            return jsonify({'success': True, 'message': '推荐模型训练完成！'})
-        else:
-            return jsonify({'success': False, 'message': '训练数据不足，请先添加更多观影记录'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/upload_reviews', methods=['POST'])
-def api_upload_reviews():
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'error': '没有文件'})
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'success': False, 'error': '文件名为空'})
-    
-    movie_name = request.form.get('movie_name', os.path.splitext(file.filename)[0])
-    
-    try:
-        reviews, movie_name = data_manager.upload_reviews(file, movie_name)
-        return jsonify({
-            'success': True,
-            'reviews': reviews,
-            'movie_name': movie_name,
-            'count': len(reviews)
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    user_id = request.json.get('user_id', data_manager.current_user)
+    top_n = int(request.json.get('top_n', 5))
+    user = data_manager.users.get(user_id, {"ratings": {}, "watched": []})
+    watched = set(user["watched"])
+    recs = [m for m in data_manager.movies if m["id"] not in watched]
+    recs.sort(key=lambda x: x["rating"], reverse=True)
+    result = [{"id": m["id"], "title": m["title"], "director": m["director"], "actors": m["actors"], "genre": m["genre"], "year": m["year"], "rating": m["rating"], "description": m["description"], "score": m["rating"]} for m in recs[:top_n]]
+    return jsonify({'success': True, 'recommendations': result, 'method': '智能推荐', 'user_id': user_id})
 
 @app.route('/api/analyze_sentiment', methods=['POST'])
 def api_analyze_sentiment():
-    data = request.json
-    source_type = data.get('source_type')
-    name = data.get('name')
-    
+    source_type = request.json.get('source_type')
+    name = request.json.get('name')
     if source_type == 'system':
         movie = next((m for m in data_manager.movies if m["title"] == name), None)
-        if movie:
-            reviews = data_manager.get_system_reviews(movie["id"])
-        else:
-            reviews = []
+        reviews = data_manager.get_system_reviews(movie["id"]) if movie else []
     elif source_type == 'crawled':
         reviews = data_manager.get_crawled_reviews(name)
-    elif source_type == 'uploaded':
-        reviews = data_manager.get_uploaded_reviews(name)
     else:
-        return jsonify({'success': False, 'error': '无效的数据源类型'})
-    
-    if not reviews:
-        return jsonify({'success': False, 'error': '暂无评论数据'})
-    
+        reviews = data_manager.get_uploaded_reviews(name)
     texts = [r['content'] for r in reviews]
     results = data_manager.sentiment_analyzer.predict_batch(texts)
-    
-    for i, review in enumerate(reviews):
-        review['sentiment'] = results[i]['sentiment']
-        review['confidence'] = results[i]['confidence']
-    
+    for i, r in enumerate(reviews):
+        r['sentiment'] = results[i]['sentiment']
     sentiments = [r['sentiment'] for r in reviews]
     counts = Counter(sentiments)
     total = len(reviews)
-    
-    return jsonify({
-        'success': True,
-        'name': name,
-        'source_type': source_type,
-        'total': total,
-        'positive': counts.get('positive', 0),
-        'positive_pct': counts.get('positive', 0) / total * 100 if total > 0 else 0,
-        'neutral': counts.get('neutral', 0),
-        'neutral_pct': counts.get('neutral', 0) / total * 100 if total > 0 else 0,
-        'negative': counts.get('negative', 0),
-        'negative_pct': counts.get('negative', 0) / total * 100 if total > 0 else 0,
-        'reviews': reviews[:100]
-    })
+    return jsonify({'success': True, 'name': name, 'total': total, 'positive': counts.get('positive', 0), 'neutral': counts.get('neutral', 0), 'negative': counts.get('negative', 0), 'reviews': reviews[:100]})
 
 @app.route('/api/get_rating_dist', methods=['POST'])
 def api_get_rating_dist():
-    data = request.json
-    source_type = data.get('source_type')
-    name = data.get('name')
-    
+    source_type = request.json.get('source_type')
+    name = request.json.get('name')
     if source_type == 'system':
         movie = next((m for m in data_manager.movies if m["title"] == name), None)
-        if movie:
-            reviews = data_manager.get_system_reviews(movie["id"])
-        else:
-            reviews = []
-    elif source_type == 'crawled':
-        reviews = data_manager.get_crawled_reviews(name)
-    elif source_type == 'uploaded':
-        reviews = data_manager.get_uploaded_reviews(name)
+        reviews = data_manager.get_system_reviews(movie["id"]) if movie else []
     else:
-        return jsonify({'success': False, 'error': '无效的数据源类型'})
-    
-    if not reviews:
-        return jsonify({'success': False, 'error': '暂无评论数据'})
-    
+        reviews = data_manager.get_crawled_reviews(name) if source_type == 'crawled' else data_manager.get_uploaded_reviews(name)
     ratings = [r["rating"] for r in reviews]
     counts = [ratings.count(i) for i in range(1, 6)]
-    
     fig, ax = plt.subplots(figsize=(8, 5))
-    bars = ax.bar(["1星", "2星", "3星", "4星", "5星"], counts, 
-                   color=['#ff6b6b', '#ffa07a', '#ffd966', '#98d98e', '#6bcf7f'])
-    ax.set_title(f"{name} 评分分布", fontsize=14, fontweight='bold')
-    ax.set_xlabel("评分", fontsize=12)
-    ax.set_ylabel("评论数量", fontsize=12)
-    
-    for bar, count in zip(bars, counts):
-        if count > 0:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5, 
-                   str(count), ha='center', va='bottom', fontsize=10)
-    
+    ax.bar(["1星", "2星", "3星", "4星", "5星"], counts, color=['#ff6b6b', '#ffa07a', '#ffd966', '#98d98e', '#6bcf7f'])
+    ax.set_title(f"{name} 评分分布")
     buffer = BytesIO()
-    fig.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
+    fig.savefig(buffer, format='png')
     buffer.seek(0)
     image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     plt.close(fig)
-    
-    return jsonify({
-        'success': True,
-        'image': image_base64
-    })
-
-@app.route('/api/get_trend_chart', methods=['POST'])
-def api_get_trend_chart():
-    data = request.json
-    source_type = data.get('source_type')
-    name = data.get('name')
-    
-    if source_type == 'system':
-        movie = next((m for m in data_manager.movies if m["title"] == name), None)
-        if movie:
-            reviews = data_manager.get_system_reviews(movie["id"])
-        else:
-            reviews = []
-    elif source_type == 'crawled':
-        reviews = data_manager.get_crawled_reviews(name)
-    elif source_type == 'uploaded':
-        reviews = data_manager.get_uploaded_reviews(name)
-    else:
-        return jsonify({'success': False, 'error': '无效的数据源类型'})
-    
-    if len(reviews) < 2:
-        return jsonify({'success': False, 'error': '评论数量不足，无法生成趋势图'})
-    
-    score_map = {"positive": 1, "neutral": 0, "negative": -1}
-    scores = [score_map[r["sentiment"]] for r in reviews]
-    
-    fig, ax = plt.subplots(figsize=(10, 5))
-    x = range(len(scores))
-    ax.plot(x, scores, 'b-', linewidth=2, marker='o', markersize=3, alpha=0.7)
-    ax.axhline(y=1, color='green', linestyle='--', alpha=0.5, label='正面')
-    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, label='中性')
-    ax.axhline(y=-1, color='red', linestyle='--', alpha=0.5, label='负面')
-    ax.fill_between(x, scores, 0, where=(np.array(scores) > 0), color='green', alpha=0.3)
-    ax.fill_between(x, scores, 0, where=(np.array(scores) < 0), color='red', alpha=0.3)
-    
-    ax.set_title(f"{name} 情感趋势分析", fontsize=14, fontweight='bold')
-    ax.set_xlabel("评论序号（按时间顺序）", fontsize=12)
-    ax.set_ylabel("情感得分", fontsize=12)
-    ax.set_yticks([-1, -0.5, 0, 0.5, 1])
-    ax.set_yticklabels(['负面', '偏负面', '中性', '偏正面', '正面'])
-    ax.legend(loc='upper right')
-    ax.grid(True, alpha=0.3)
-    
-    buffer = BytesIO()
-    fig.savefig(buffer, format='png', dpi=100, bbox_inches='tight')
-    buffer.seek(0)
-    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    plt.close(fig)
-    
-    return jsonify({
-        'success': True,
-        'image': image_base64
-    })
-
-@app.route('/api/chat', methods=['POST'])
-def api_chat():
-    data = request.json
-    message = data.get('message', '')
-    message_lower = message.lower()
-    
-    if "推荐" in message_lower:
-        response = "推荐《肖申克的救赎》《霸王别姬》《阿甘正传》这些经典电影"
-    elif "评分" in message_lower:
-        response = "《肖申克的救赎》9.7分，《霸王别姬》9.6分，《阿甘正传》9.5分"
-    elif "类型" in message_lower:
-        response = "电影类型包括：剧情、科幻、动画、爱情、喜剧、悬疑、动作、奇幻等"
-    else:
-        response = "我是电影助手！可以问我电影推荐、评分查询、类型介绍等问题"
-    
-    return jsonify({
-        'success': True,
-        'response': response
-    })
+    return jsonify({'success': True, 'image': image_base64})
 
 @app.route('/api/user/info')
 def api_user_info():
     user = data_manager.users.get(data_manager.current_user, {"watched": []})
     watched_movies = [m for m in data_manager.movies if m["id"] in user["watched"]]
-    
-    return jsonify({
-        'username': data_manager.current_user,
-        'watched_count': len(watched_movies),
-        'watched_movies': watched_movies
-    })
+    return jsonify({'username': data_manager.current_user, 'watched_count': len(watched_movies), 'watched_movies': watched_movies})
 
 @app.route('/api/user/login', methods=['POST'])
 def api_user_login():
-    data = request.json
-    username = data.get('username')
-    
+    username = request.json.get('username')
     if username in data_manager.users:
         data_manager.current_user = username
-        return jsonify({'success': True, 'username': username})
-    else:
-        return jsonify({'success': False, 'error': '用户不存在'})
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': '用户不存在'})
 
 @app.route('/api/user/register', methods=['POST'])
 def api_user_register():
-    data = request.json
-    username = data.get('username')
-    
+    username = request.json.get('username')
     if username not in data_manager.users:
-        data_manager.users[username] = {"watched": [], "ratings": {}, "favorites": [], "watchlist": []}
+        data_manager.users[username] = {"watched": [], "ratings": {}, "favorites": [], "watchlist": [], "user_info": {}}
         data_manager.current_user = username
-        return jsonify({'success': True, 'username': username})
-    else:
-        return jsonify({'success': False, 'error': '用户已存在'})
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': '用户已存在'})
 
 @app.route('/api/user/add_record', methods=['POST'])
 def api_user_add_record():
-    data = request.json
-    movie_title = data.get('movie_title')
-    rating = int(data.get('rating', 8))
-    
+    movie_title = request.json.get('movie_title')
+    rating = int(request.json.get('rating', 8))
     movie = next((m for m in data_manager.movies if m["title"] == movie_title), None)
     if not movie:
         return jsonify({'success': False, 'error': '电影不存在'})
-    
     user = data_manager.users[data_manager.current_user]
     if movie["id"] not in user["watched"]:
         user["watched"].append(movie["id"])
     user["ratings"][movie["id"]] = rating
-    
     return jsonify({'success': True})
 
-@app.route('/api/train_model', methods=['POST'])
-def api_train_model():
-    """训练情感分析模型"""
-    try:
-        data_manager.train_sentiment_model()
-        return jsonify({
-            'success': True,
-            'message': '情感分析模型训练完成！'
+@app.route('/api/upload_user_data', methods=['POST'])
+def api_upload_user_data():
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': '没有文件'})
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': '文件名为空'})
+    result = data_manager.upload_user_data(file)
+    return jsonify(result)
+
+@app.route('/api/get_user_data_list', methods=['GET'])
+def api_get_user_data_list():
+    data_list = []
+    for data_id, data in data_manager.uploaded_user_data.items():
+        data_list.append({
+            'data_id': data_id, 'filename': data['filename'], 'file_type': data.get('file_type', '.xlsx'),
+            'upload_time': data['upload_time'], 'total_users': data['total_users'],
+            'total_movies': data.get('total_movies', 0), 'format': data.get('format', 'unknown')
         })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
+    return jsonify({'success': True, 'data_list': data_list})
+
+@app.route('/api/analyze_user_data', methods=['POST'])
+def api_analyze_user_data():
+    data = request.json
+    data_id = data.get('data_id')
+    if not data_id:
+        return jsonify({'success': False, 'error': '请提供数据ID'})
+    result = data_manager.analyze_user_data(data_id)
+    if result:
+        return jsonify(result)
+    return jsonify({'success': False, 'error': '数据不存在'})
+
+@app.route('/api/get_user_data_preview', methods=['POST'])
+def api_get_user_data_preview():
+    data = request.json
+    data_id = data.get('data_id')
+    if not data_id or data_id not in data_manager.uploaded_user_data:
+        return jsonify({'success': False, 'error': '数据不存在'})
+    user_data = data_manager.uploaded_user_data[data_id]
+    return jsonify({
+        'success': True, 'data_id': data_id, 'filename': user_data['filename'],
+        'file_type': user_data.get('file_type', '.xlsx'), 'upload_time': user_data['upload_time'],
+        'total_users': user_data['total_users'], 'total_movies': user_data.get('total_movies', 0),
+        'format': user_data.get('format', 'unknown'),
+        'preview': user_data.get('raw_records', user_data['records'])[:10]
+    })
+
+# 获取用户类型偏好API（用于电影盲盒）
+@app.route('/api/get_genre_preferences', methods=['POST'])
+def api_get_genre_preferences():
+    data = request.json
+    data_id = data.get('data_id')
+    if not data_id:
+        return jsonify({'success': False, 'error': '请提供数据ID'})
+    result = data_manager.get_user_genre_preferences(data_id)
+    if result:
+        return jsonify(result)
+    return jsonify({'success': False, 'error': '数据不存在'})
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("豆瓣电影数据分析与推荐系统 - PyTorch CNN+LSTM版本")
-    print("神经网络推荐引擎: 协同过滤 + 内容特征 + MLP")
+    print("豆瓣电影数据分析与推荐系统")
+    print("页面结构: 首页 | 影视分析 | 推荐引擎 | 社交管理")
+    print("支持格式: Excel (.xlsx, .xls) 和 CSV (.csv)")
+    print("电影盲盒: 基于用户上传数据的观影类型智能推荐")
+    print("AI助手: 智谱AI大模型智能对话")
     print("访问地址: http://127.0.0.1:5000")
     print("=" * 60)
     
@@ -1803,6 +1339,6 @@ if __name__ == '__main__':
         print(f"PyTorch版本: {torch.__version__}")
         print(f"CUDA可用: {torch.cuda.is_available()}")
     except:
-        print("⚠️ PyTorch未安装，请运行: pip install torch")
+        print("[WARN] PyTorch未安装")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
