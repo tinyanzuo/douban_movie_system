@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>豆瓣电影数据分析与推荐系统</title>
+    <title>豆瓣影视数据分析与推荐系统</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
-        
+
         .navbar {
             background: rgba(255, 255, 255, 0.95);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -24,7 +24,7 @@
             top: 0;
             z-index: 1000;
         }
-        
+
         .nav-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -34,20 +34,20 @@
             align-items: center;
             height: 60px;
         }
-        
+
         .logo {
             font-size: 1.5rem;
             font-weight: bold;
             color: #667eea;
             text-decoration: none;
         }
-        
+
         .nav-links {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
         }
-        
+
         .nav-links a {
             text-decoration: none;
             color: #333;
@@ -55,18 +55,18 @@
             border-radius: 20px;
             transition: all 0.3s;
         }
-        
+
         .nav-links a:hover, .nav-links a.active {
             background: #667eea;
             color: white;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 40px auto;
             padding: 0 20px;
         }
-        
+
         .hero {
             text-align: center;
             padding: 60px 20px;
@@ -75,26 +75,26 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             margin-bottom: 40px;
         }
-        
+
         .hero h1 {
             font-size: 2.5rem;
             color: #333;
             margin-bottom: 20px;
         }
-        
+
         .hero p {
             font-size: 1.2rem;
             color: #666;
             margin-bottom: 30px;
         }
-        
+
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
             margin-top: 40px;
         }
-        
+
         .feature-card {
             background: white;
             border-radius: 15px;
@@ -106,35 +106,35 @@
             color: inherit;
             display: block;
         }
-        
+
         .feature-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
-        
+
         .feature-icon {
             font-size: 3rem;
             margin-bottom: 20px;
         }
-        
+
         .feature-card h3 {
             font-size: 1.3rem;
             margin-bottom: 15px;
             color: #333;
         }
-        
+
         .feature-card p {
             color: #666;
             line-height: 1.6;
         }
-        
+
         .footer {
             text-align: center;
             padding: 30px;
             color: rgba(255,255,255,0.8);
             margin-top: 40px;
         }
-        
+
         @media (max-width: 768px) {
             .nav-links {
                 gap: 10px;
@@ -150,97 +150,71 @@
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="logo">🎬 豆瓣电影分析</a>
-            <div class="nav-links">
-                <a href="/" class="active">首页</a>
-                <a href="/data_collection">数据采集</a>
-                <a href="/data_analysis">数据分析</a>
-                <a href="/movie_analysis">电影分析</a>
-                <a href="/recommendation">推荐引擎</a>
-                <a href="/ai_assistant">AI助手</a>
-                <a href="/social">社交互动</a>
-                <a href="/user">用户系统</a>
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/" class="logo">🎬 豆瓣影视分析</a>
+        <div class="nav-links">
+            <a href="/" class="active">首页</a>
+            <a href="/movie_analysis_hub">影视分析</a>
+            <a href="/recommendation">推荐引擎</a>
+            <a href="/social_hub">社交管理</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="hero">
+        <h1>🎬 豆瓣影视数据分析与推荐系统</h1>
+        <p>影视数据分析 | 智能影视推荐 | 社交互动管理</p>
+    </div>
+
+    <div class="features">
+        <a href="/movie_analysis_hub" class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>影视分析</h3>
+            <p>数据采集、数据分析、影视分析一体化平台，支持爬虫、情感分析、可视化图表</p>
+        </a>
+
+        <a href="/recommendation" class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>推荐引擎</h3>
+            <p>基于神经网络的智能推荐、协同过滤、混合推荐、情绪感知推荐</p>
+        </a>
+
+        <a href="/social_hub" class="feature-card">
+            <div class="feature-icon">👥</div>
+            <h3>社交管理</h3>
+            <p>用户系统、社交互动、影迷匹配、电影盲盒、知识问答、个人档案</p>
+        </a>
+    </div>
+
+    <div class="hero" style="margin-top: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h2 style="color: white;">✨ 系统特色</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px;">
+            <div>
+                <div style="font-size: 2rem;">🤖</div>
+                <div>机器学习情感分析</div>
             </div>
-        </div>
-    </nav>
-    
-    <div class="container">
-        <div class="hero">
-            <h1>🎬 豆瓣电影数据分析与推荐系统</h1>
-            <p>基于机器学习的情感分析 | 智能电影推荐 | 真实豆瓣数据爬取</p>
-        </div>
-        
-        <div class="features">
-            <a href="/data_collection" class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>数据采集</h3>
-                <p>真实豆瓣电影评论爬取，支持生成演示评论，定时更新数据</p>
-            </a>
-            
-            <a href="/data_analysis" class="feature-card">
-                <div class="feature-icon">📈</div>
-                <h3>数据分析</h3>
-                <p>评分分布图、情感分析、情感趋势图、词云分析、短评摘要等</p>
-            </a>
-            
-            <a href="/movie_analysis" class="feature-card">
-                <div class="feature-icon">🎬</div>
-                <h3>电影分析</h3>
-                <p>电影基本信息、类型分析、导演/演员影响力分析</p>
-            </a>
-            
-            <a href="/recommendation" class="feature-card">
-                <div class="feature-icon">🎯</div>
-                <h3>推荐引擎</h3>
-                <p>基于历史记录推荐、混合推荐、冷启动处理、情绪感知推荐</p>
-            </a>
-            
-            <a href="/ai_assistant" class="feature-card">
-                <div class="feature-icon">🤖</div>
-                <h3>AI小助手</h3>
-                <p>电影问答、对话式推荐、影评总结、观影报告生成</p>
-            </a>
-            
-            <a href="/social" class="feature-card">
-                <div class="feature-icon">👥</div>
-                <h3>社交互动</h3>
-                <p>影迷匹配、电影盲盒、电影知识问答、台词猜电影</p>
-            </a>
-            
-            <a href="/user" class="feature-card">
-                <div class="feature-icon">👤</div>
-                <h3>用户系统</h3>
-                <p>用户登录注册、观影记录管理、收藏清单、用户维度分析</p>
-            </a>
-        </div>
-        
-        <div class="hero" style="margin-top: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-            <h2 style="color: white;">✨ 系统特色</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px;">
-                <div>
-                    <div style="font-size: 2rem;">🤖</div>
-                    <div>机器学习情感分析</div>
-                </div>
-                <div>
-                    <div style="font-size: 2rem;">🕷️</div>
-                    <div>真实豆瓣爬虫</div>
-                </div>
-                <div>
-                    <div style="font-size: 2rem;">📊</div>
-                    <div>可视化数据分析</div>
-                </div>
-                <div>
-                    <div style="font-size: 2rem;">🎯</div>
-                    <div>智能推荐算法</div>
-                </div>
+            <div>
+                <div style="font-size: 2rem;">🕷️</div>
+                <div>真实豆瓣爬虫</div>
+            </div>
+            <div>
+                <div style="font-size: 2rem;">📊</div>
+                <div>可视化数据分析</div>
+            </div>
+            <div>
+                <div style="font-size: 2rem;">🎯</div>
+                <div>智能推荐算法</div>
             </div>
         </div>
     </div>
-    
-    <div class="footer">
-        <p>豆瓣电影数据分析与推荐系统 | 基于机器学习的情感分析 | 数据来源于豆瓣电影</p>
-    </div>
+</div>
+
+<div class="footer">
+    <p>豆瓣影视数据分析与推荐系统 | 基于机器学习的情感分析 | 数据来源于豆瓣影视</p>
+</div>
+
+{% include 'ai_chat_widget.html' %}
 </body>
 </html>

@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社交管理 - 豆瓣电影分析系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 20px; display: flex; gap: 20px; flex-wrap: wrap; }
+        .sidebar { width: 360px; flex-shrink: 0; }
+        .main-content { flex: 1; min-width: 0; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h2 { margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; font-size: 1.2rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; margin-bottom: 8px; width: 100%; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-info { background: #4299e1; color: white; }
+        .btn-warning { background: #ecc94b; color: #744210; }
+        .btn-danger { background: #f56565; color: white; }
+        .result-area { background: #f7fafc; border-radius: 10px; padding: 15px; max-height: 550px; overflow-y: auto; font-family: monospace; font-size: 13px; line-height: 1.8; }
+        .user-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .btn-group .btn { width: auto; flex: 1; margin-bottom: 0; }
+        .upload-area { border: 2px dashed #ddd; border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px; background: #fafafa; cursor: pointer; transition: all 0.3s; }
+        .upload-area:hover { border-color: #667eea; background: #f5f3ff; }
+        .data-select { margin-top: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; width: 100%; }
+        .chart-container { text-align: center; margin: 15px 0; background: white; padding: 10px; border-radius: 10px; }
+        .chart-container img { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: #f7fafc; padding: 12px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.3s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #eef2ff; }
+        .stat-number { font-size: 28px; font-weight: bold; color: #667eea; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .preview-table th, .preview-table td { padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .preview-table th { background: #f7fafc; font-weight: 600; }
+        
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            width: 80%;
+            max-width: 900px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { margin: 0; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            line-height: 1;
+        }
+        .modal-close:hover { transform: scale(1.2); }
+        .modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+        .modal-body img { max-width: 100%; border-radius: 10px; }
+        .modal-body table { width: 100%; border-collapse: collapse; }
+        .modal-body th, .modal-body td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .modal-body th { background: #f7fafc; }
+        .analysis-btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .analysis-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            background: #f0f0f0;
+            color: #333;
+            text-align: center;
+        }
+        .analysis-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .btn-chart { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-table { background: #48bb78; color: white; }
+        
+        /* 电影盲盒3D动画样式 */
+        .gift-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 450px;
+            perspective: 1000px;
+        }
+        .gift-box {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            animation: giftFloat 2s ease-in-out infinite;
+            transition: all 0.5s ease;
+        }
+        .gift-box.opening { animation: giftShake 0.5s ease-in-out; }
+        .gift-box.opened { animation: giftFlyUp 0.8s ease-out forwards; }
+        @keyframes giftFloat {
+            0%, 100% { transform: translateY(0px) rotateX(0deg); }
+            50% { transform: translateY(-15px) rotateX(5deg); }
+        }
+        @keyframes giftShake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(-12px) rotate(-6deg); }
+            75% { transform: translateX(12px) rotate(6deg); }
+        }
+        @keyframes giftFlyUp {
+            0% { transform: translateY(0) scale(1) rotateY(0deg); opacity: 1; }
+            50% { transform: translateY(-100px) scale(0.8) rotateY(180deg); opacity: 0.5; }
+            100% { transform: translateY(-300px) scale(0.3) rotateY(360deg); opacity: 0; }
+        }
+        .gift-lid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 15px 15px 0 0;
+            z-index: 2;
+            transform-origin: bottom;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .gift-box.opening .gift-lid { transform: rotateX(-130deg) translateY(-35px); }
+        .gift-body {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .ribbon-horizontal {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background: #f1c40f;
+            transform: translateY(-50%);
+            z-index: 3;
+        }
+        .ribbon-vertical {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 12px;
+            height: 100%;
+            background: #f1c40f;
+            transform: translateX(-50%);
+            z-index: 3;
+        }
+        .ribbon-horizontal-body {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background: #f1c40f;
+            transform: translateY(-50%);
+            z-index: 3;
+        }
+        .ribbon-vertical-body {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 12px;
+            height: 100%;
+            background: #f1c40f;
+            transform: translateX(-50%);
+            z-index: 3;
+        }
+        .bow {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 40px;
+            z-index: 4;
+        }
+        .bow-left, .bow-right {
+            position: absolute;
+            width: 25px;
+            height: 30px;
+            background: #f39c12;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            top: 0;
+        }
+        .bow-left { left: 0; transform: rotate(-30deg); }
+        .bow-right { right: 0; transform: rotate(30deg); }
+        .bow-center {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #e67e22;
+            border-radius: 50%;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+        }
+        .sparkles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 6;
+        }
+        .sparkle {
+            position: absolute;
+            font-size: 20px;
+            animation: sparkleAnim 1.5s ease-in-out infinite;
+        }
+        .s1 { top: -20px; left: -20px; animation-delay: 0s; }
+        .s2 { top: -30px; right: -10px; animation-delay: 0.3s; }
+        .s3 { bottom: -20px; left: 50%; animation-delay: 0.6s; }
+        .s4 { top: 50%; right: -25px; animation-delay: 0.9s; }
+        .s5 { bottom: -10px; right: -15px; animation-delay: 1.2s; }
+        @keyframes sparkleAnim {
+            0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+        }
+        .gift-result {
+            margin-top: 40px;
+            width: 100%;
+            animation: resultFadeIn 0.8s ease-out;
+        }
+        @keyframes resultFadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .result-card {
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        .result-icon { font-size: 50px; margin-bottom: 15px; }
+        .result-card h3 { color: #667eea; margin-bottom: 15px; font-size: 24px; }
+        .movie-title { font-size: 28px; font-weight: bold; color: #333; margin: 15px 0; }
+        .movie-rating { font-size: 20px; color: #f6ad55; margin-bottom: 10px; }
+        .movie-desc { color: #666; line-height: 1.6; margin: 15px 0; padding: 0 20px; }
+        .movie-genre { display: inline-block; background: #667eea; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; margin-top: 10px; }
+        .match-badge, .surprise-badge, .random-badge {
+            margin: 15px auto;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            display: inline-block;
+        }
+        .match-badge { background: #48bb78; color: white; }
+        .surprise-badge { background: #f39c12; color: white; }
+        .random-badge { background: #667eea; color: white; }
+        .gift-loading { text-align: center; padding: 50px; }
+        .gift-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: giftSpin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes giftSpin { to { transform: rotate(360deg); } }
+        
+        /* 电影猜谜样式 */
+        .quiz-container {
+            text-align: center;
+            padding: 20px;
+        }
+        .quiz-clues {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .quiz-clue-item {
+            padding: 8px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .quiz-input {
+            width: 80%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .quiz-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .quiz-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .quiz-correct { background: #c6f6d5; color: #22543d; }
+        .quiz-wrong { background: #fed7d7; color: #9b2c2c; }
+        
+        .social-btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .social-btn-grid .btn {
+            margin-bottom: 0;
+            font-size: 13px;
+            padding: 10px 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; }
+            .nav-links a { font-size: 12px; padding: 5px 10px; }
+            .modal-content { width: 95%; margin: 10% auto; }
+            .movie-title { font-size: 22px; }
+            .social-btn-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🎬 豆瓣电影分析</a>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/movie_analysis_hub">影视分析</a>
+                <a href="/recommendation">推荐引擎</a>
+                <a href="/social_hub" class="active">社交管理</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="sidebar">
+            <!-- 用户登录区域 -->
+            <div class="card">
+                <h2>🔐 用户系统</h2>
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="用户名" value="user_001">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="login()">登录</button>
+                    <button class="btn btn-success" onclick="register()">注册</button>
+                </div>
+            </div>
+            
+            <!-- 观影记录管理 -->
+            <div class="card">
+                <h2>📺 观影记录</h2>
+                <div class="btn-group">
+                    <button class="btn btn-info" onclick="viewHistory()">查看记录</button>
+                    <button class="btn btn-info" onclick="showAddRecord()">添加记录</button>
+                </div>
+            </div>
+            
+            <!-- 用户数据上传区域 -->
+            <div class="card">
+                <h2>📤 上传用户数据</h2>
+                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                    💡 支持多种格式：<strong>Excel (.xlsx, .xls)</strong> 和 <strong>CSV (.csv)</strong>
+                </p>
+                <div class="upload-area" onclick="document.getElementById('user-data-file').click()">
+                    📁 点击选择文件（Excel 或 CSV）
+                    <input type="file" id="user-data-file" accept=".xlsx,.xls,.csv" style="display: none;" onchange="uploadUserData()">
+                </div>
+                <div id="upload-status" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+                
+                <h2 style="margin-top: 15px;">📋 已上传数据</h2>
+                <select id="data-select" class="data-select" onchange="selectUserData()">
+                    <option value="">请选择已上传的数据</option>
+                </select>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn btn-info" onclick="previewUserData()">👁️ 预览数据</button>
+                    <button class="btn btn-primary" onclick="analyzeUploadedData()">📊 加载分析数据</button>
+                </div>
+            </div>
+            
+            <!-- 社交互动功能 -->
+            <div class="card">
+                <h2>👥 社交互动</h2>
+                <div class="social-btn-grid">
+                    <button class="btn btn-primary" onclick="blindBox()">🎁 电影盲盒</button>
+                    <button class="btn btn-success" onclick="startMovieQuiz()">🎯 电影猜谜</button>
+                    <button class="btn btn-success" onclick="watchChallenge()">🎯 观影挑战</button>
+                    <button class="btn btn-info" onclick="fanLevel()">🏅 影迷等级</button>
+                    <button class="btn btn-info" onclick="moviePersonalityTest()">🎭 性格测试</button>
+                    <button class="btn btn-warning" onclick="exchangeRecommendation()">🎁 推荐交换</button>
+                    <button class="btn btn-warning" onclick="randomMovieDate()">🎲 电影盲约</button>
+                    <button class="btn btn-info" onclick="watchDiary()">📔 观影日记</button>
+                    <button class="btn btn-primary" onclick="matchFans()">👥 影迷匹配</button>
+                    <button class="btn btn-primary" onclick="annualSummary()">📅 年度总结</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- 用户信息 -->
+            <div id="user-info" class="user-info">
+                <h3>👤 当前用户: {{ user }}</h3>
+                <p id="user-stats">加载中...</p>
+            </div>
+            
+            <!-- 用户维度分析 -->
+            <div class="card">
+                <h2>📊 用户维度分析</h2>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="analyzeCurrentUser()">📊 当前用户分析</button>
+                    <button class="btn btn-success" onclick="analyzeUploadedData()">📈 加载上传数据</button>
+                </div>
+                <div id="analysis-buttons" style="display: none; margin-top: 15px;">
+                    <div style="font-size: 13px; color: #666; margin-bottom: 10px;">📊 点击下方按钮查看详细分析：</div>
+                    <div class="analysis-btn-group">
+                        <button class="analysis-btn btn-chart" onclick="showGenderChart()">👥 性别分布图</button>
+                        <button class="analysis-btn btn-chart" onclick="showAgeChart()">📊 年龄分布图</button>
+                        <button class="analysis-btn btn-chart" onclick="showGenreChart()">🎬 类型偏好图</button>
+                        <button class="analysis-btn btn-chart" onclick="showWatchChart()">📈 观影数量分布图</button>
+                        <button class="analysis-btn btn-table" onclick="showUserTable()">📋 用户明细表</button>
+                        <button class="analysis-btn btn-table" onclick="showMovieRanking()">🎥 热门电影排行</button>
+                        <button class="analysis-btn btn-table" onclick="showGenreRanking()">🏷️ 类型偏好排行</button>
+                        <button class="analysis-btn btn-table" onclick="showStatsSummary()">📊 统计摘要</button>
+                    </div>
+                </div>
+                <div id="analysis-result" class="result-area" style="margin-top: 15px;">
+                    💡 使用说明：<br><br>
+                    1️⃣ 在上传区域上传Excel或CSV文件<br>
+                    2️⃣ 选择文件后点击"加载分析数据"<br>
+                    3️⃣ 然后点击上方按钮查看各类图表和统计
+                </div>
+            </div>
+            
+            <!-- 互动结果区域 -->
+            <div class="card">
+                <h2>🎉 互动内容</h2>
+                <div id="social-result" class="result-area">
+                    请点击左侧社交互动按钮...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 弹窗模态框 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">图表</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modal-body" class="modal-body">加载中...</div>
+        </div>
+    </div>
+    
+    <script>
+        let currentUser = '{{ user }}';
+        let currentDataId = '';
+        let currentAnalysisData = null;
+        
+        // 电影猜谜数据库（支持电影和电视剧）
+        const MOVIE_QUIZ_DB = [
+            { clues: ["希望让人自由", "监狱", "摩根·弗里曼"], answer: "肖申克的救赎", type: "电影", hint: "经典越狱题材" },
+            { clues: ["风华绝代", "京剧", "张国荣"], answer: "霸王别姬", type: "电影", hint: "陈凯歌导演" },
+            { clues: ["人生就像一盒巧克力", "跑步", "汤姆·汉克斯"], answer: "阿甘正传", type: "电影", hint: "励志经典" },
+            { clues: ["梦境", "陀螺", "诺兰"], answer: "盗梦空间", type: "电影", hint: "烧脑科幻" },
+            { clues: ["穿越时空", "黑洞", "马修·麦康纳"], answer: "星际穿越", type: "电影", hint: "诺兰科幻巨制" },
+            { clues: ["You jump, I jump", "大船", "莱昂纳多"], answer: "泰坦尼克号", type: "电影", hint: "经典爱情灾难片" },
+            { clues: ["无脸男", "汤婆婆", "宫崎骏"], answer: "千与千寻", type: "电影", hint: "奥斯卡最佳动画" },
+            { clues: ["1900", "钢琴", "一生不下船"], answer: "海上钢琴师", type: "电影", hint: "音乐与自由" },
+            { clues: ["站着把钱挣了", "鹅城", "姜文"], answer: "让子弹飞", type: "电影", hint: "姜文导演作品" },
+            { clues: ["我命由我不由天", "哪吒", "国产动画"], answer: "哪吒之魔童降世", type: "电影", hint: "国产动画巅峰" },
+            { clues: ["药神", "徐峥", "现实题材"], answer: "我不是药神", type: "电影", hint: "感动无数人" },
+            { clues: ["绿皮车", "种族歧视", "钢琴家"], answer: "绿皮书", type: "电影", hint: "奥斯卡最佳影片" },
+            { clues: ["追求卓越", "阿米尔·汗", "印度电影"], answer: "三傻大闹宝莱坞", type: "电影", hint: "印度励志喜剧" },
+            { clues: ["音乐治愈", "马修老师", "合唱团"], answer: "放牛班的春天", type: "电影", hint: "法国音乐电影" },
+            { clues: ["等待主人", "秋田犬", "真实故事"], answer: "忠犬八公的故事", type: "电影", hint: "感人至深" },
+            { clues: ["纳粹集中营", "父亲", "游戏"], answer: "美丽人生", type: "电影", hint: "笑着流泪" },
+            { clues: ["初恋", "梧桐树", "朱莉"], answer: "怦然心动", type: "电影", hint: "纯真爱情" },
+            { clues: ["后宫", "甄嬛", "皇帝"], answer: "甄嬛传", type: "电视剧", hint: "宫斗剧经典" },
+            { clues: ["老友", "中央公园咖啡馆", "六人行"], answer: "老友记", type: "电视剧", hint: "美剧经典" },
+            { clues: ["权游", "铁王座", "龙母"], answer: "权力的游戏", type: "电视剧", hint: "HBO史诗巨制" },
+            { clues: ["白夜追凶", "双胞胎", "潘粤明"], answer: "白夜追凶", type: "电视剧", hint: "国产悬疑佳作" },
+            { clues: ["余欢水", "中年危机", "郭京飞"], answer: "我是余欢水", type: "电视剧", hint: "荒诞现实" },
+            { clues: ["陈情令", "魏无羡", "蓝忘机"], answer: "陈情令", type: "电视剧", hint: "古装玄幻" },
+            { clues: ["庆余年", "范闲", "穿越"], answer: "庆余年", type: "电视剧", hint: "穿越权谋" },
+            { clues: ["沉默的真相", "江阳", "正义"], answer: "沉默的真相", type: "电视剧", hint: "高分国产剧" },
+            { clues: ["隐秘的角落", "爬山", "张东升"], answer: "隐秘的角落", type: "电视剧", hint: "悬疑神剧" },
+            { clues: ["请回答1988", "双门洞", "德善"], answer: "请回答1988", type: "电视剧", hint: "韩剧温情经典" }
+        ];
+        
+        let currentQuiz = null;
+        
+        // 本地电影缓存（用于盲盒）
+        const LOCAL_MOVIE_CACHE = {
+            "肖申克的救赎": { rating: 9.7, description: "希望让人自由，一部关于希望与救赎的经典之作。" },
+            "霸王别姬": { rating: 9.6, description: "风华绝代，一曲人生悲歌。" },
+            "阿甘正传": { rating: 9.5, description: "人生就像一盒巧克力，你永远不知道下一块是什么味道。" },
+            "盗梦空间": { rating: 9.4, description: "梦境与现实，一场关于意识的大胆探索。" },
+            "星际穿越": { rating: 9.4, description: "穿越时空的爱，人类命运的终极探索。" },
+            "泰坦尼克号": { rating: 9.5, description: "永恒的爱情，永不沉没的经典。" },
+            "千与千寻": { rating: 9.4, description: "成长的旅程，宫崎骏的巅峰之作。" },
+            "海上钢琴师": { rating: 9.3, description: "1900的故事，音乐与自由的传奇。" },
+            "三傻大闹宝莱坞": { rating: 9.2, description: "追求卓越，成功会不请自来。" },
+            "放牛班的春天": { rating: 9.3, description: "音乐治愈心灵。" },
+            "怦然心动": { rating: 9.1, description: "初恋的美好，成长的喜悦。" },
+            "绿皮书": { rating: 8.9, description: "跨越种族与阶层的友谊。" },
+            "我不是药神": { rating: 9.0, description: "现实题材的震撼之作。" },
+            "让子弹飞": { rating: 9.0, description: "站着把钱挣了！" },
+            "流浪地球": { rating: 7.9, description: "带着地球去流浪，中国科幻的里程碑。" }
+        };
+        
+        // ==================== 基础功能 ====================
+        function updateUserInfo() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('user-stats').innerHTML = `📊 观影数量: ${data.watched_count}部`;
+                    currentUser = data.username;
+                })
+                .catch(() => { document.getElementById('user-stats').innerHTML = '📊 请先登录'; });
+        }
+        
+        function login() {
+            const username = document.getElementById('username').value;
+            fetch('/api/user/login', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: username})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) { alert('登录成功！欢迎回来，' + username); updateUserInfo(); }
+                else { alert('登录失败：用户不存在'); }
+            });
+        }
+        
+        function register() {
+            const username = document.getElementById('username').value;
+            fetch('/api/user/register', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: username})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) { alert('注册成功！欢迎新用户，' + username); updateUserInfo(); }
+                else { alert('注册失败：用户已存在'); }
+            });
+        }
+        
+        function viewHistory() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    const resultDiv = document.getElementById('analysis-result');
+                    if (data.watched_movies && data.watched_movies.length > 0) {
+                        let html = '=== 📺 观影记录 ===\n\n';
+                        data.watched_movies.forEach(m => { html += `• 《${m.title}》 - ⭐ ${m.rating}分\n`; });
+                        resultDiv.innerHTML = html;
+                    } else { resultDiv.innerHTML = '暂无观影记录，快去添加吧！'; }
+                });
+        }
+        
+        function showAddRecord() {
+            const movieTitle = prompt('请输入电影名称:', '肖申克的救赎');
+            if (movieTitle) {
+                const rating = prompt('请输入评分(1-10):', '8');
+                if (rating) {
+                    fetch('/api/user/add_record', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({movie_title: movieTitle, rating: parseInt(rating)})
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) { alert('添加成功！'); updateUserInfo(); }
+                        else { alert('添加失败：' + data.error); }
+                    });
+                }
+            }
+        }
+        
+        // ==================== 文件上传和数据分析 ====================
+        function uploadUserData() {
+            const file = document.getElementById('user-data-file').files[0];
+            if (!file) { alert('请选择Excel或CSV文件'); return; }
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.csv')) {
+                alert('请上传Excel文件(.xlsx, .xls)或CSV文件(.csv)');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            document.getElementById('upload-status').innerHTML = '⏳ 正在上传和分析...';
+            document.getElementById('upload-status').style.color = 'orange';
+            fetch('/api/upload_user_data', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        let formatText = data.total_movies ? `，共 ${data.total_movies} 部电影记录` : '';
+                        const fileType = fileName.endsWith('.csv') ? 'CSV' : 'Excel';
+                        document.getElementById('upload-status').innerHTML = `✅ 上传成功！${fileType}文件，共 ${data.total_users} 位用户${formatText}`;
+                        document.getElementById('upload-status').style.color = 'green';
+                        loadUserDataList();
+                        setTimeout(() => { currentDataId = data.data_id; analyzeUploadedData(); }, 500);
+                    } else {
+                        document.getElementById('upload-status').innerHTML = `❌ ${data.error}`;
+                        document.getElementById('upload-status').style.color = 'red';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('upload-status').innerHTML = `❌ 请求失败: ${err.message}`;
+                    document.getElementById('upload-status').style.color = 'red';
+                });
+        }
+        
+        function loadUserDataList() {
+            fetch('/api/get_user_data_list')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const select = document.getElementById('data-select');
+                        select.innerHTML = '<option value="">请选择已上传的数据</option>';
+                        data.data_list.forEach(item => {
+                            let formatBadge = item.format === 'long' ? '📝长格式' : (item.format === 'wide' ? '📊宽格式' : '📄简化格式');
+                            const movieInfo = item.total_movies ? `, ${item.total_movies}部电影` : '';
+                            const fileType = item.file_type === '.csv' ? 'CSV' : (item.file_type === '.xlsx' ? 'Excel' : '文件');
+                            const option = document.createElement('option');
+                            option.value = item.data_id;
+                            option.text = `${item.filename} [${fileType}] - ${item.total_users}人${movieInfo} (${formatBadge})`;
+                            select.appendChild(option);
+                        });
+                    }
+                });
+        }
+        
+        function selectUserData() { currentDataId = document.getElementById('data-select').value; }
+        
+        function previewUserData() {
+            if (!currentDataId) { alert('请先选择数据'); return; }
+            fetch('/api/get_user_data_preview', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({data_id: currentDataId})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    let html = `<h3>📄 ${data.filename} 数据预览</h3>`;
+                    html += `<p>📅 上传时间: ${data.upload_time}</p>`;
+                    html += `<p>👥 用户数: ${data.total_users} 人`;
+                    if (data.total_movies) html += ` | 🎬 电影记录: ${data.total_movies} 条`;
+                    html += `</p><hr><table class="preview-table"><thead><tr>`;
+                    if (data.preview && data.preview.length > 0) {
+                        const keys = Object.keys(data.preview[0]);
+                        keys.forEach(key => {
+                            let label = key === 'nickname' ? '用户昵称' : (key === 'movie_name' ? '电影名称' : (key === 'watch_date' ? '观影日期' : (key === 'movie_type' ? '电影类型' : key)));
+                            html += `<th>${label}</th>`;
+                        });
+                        html += `</thead><tbody>`;
+                        data.preview.forEach(record => {
+                            html += `<tr>`;
+                            Object.values(record).forEach(val => {
+                                let displayVal = String(val).substring(0, 30);
+                                html += `<td>${displayVal || '-'}</td>`;
+                            });
+                            html += `</tr>`;
+                        });
+                        html += `</tbody></table>`;
+                    }
+                    document.getElementById('analysis-result').innerHTML = html;
+                } else { alert(data.error); }
+            });
+        }
+        
+        function analyzeCurrentUser() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    let html = '<div style="font-family: system-ui;"><h3>👤 当前用户分析</h3>';
+                    html += `<p><strong>用户名:</strong> ${data.username}</p>`;
+                    html += `<p><strong>📊 观影数量:</strong> ${data.watched_count} 部</p>`;
+                    html += `<hr><h4>🎬 已观影列表：</h4>`;
+                    if (data.watched_movies && data.watched_movies.length > 0) {
+                        html += `<ul>`;
+                        data.watched_movies.forEach(m => { html += `<li>《${m.title}》 - ⭐ ${m.rating}分</li>`; });
+                        html += `</ul>`;
+                    } else { html += `<p>暂无观影记录</p>`; }
+                    html += `</div>`;
+                    document.getElementById('analysis-result').innerHTML = html;
+                    document.getElementById('analysis-buttons').style.display = 'none';
+                });
+        }
+        
+        function analyzeUploadedData() {
+            if (!currentDataId) { alert('请先选择要分析的数据'); return; }
+            document.getElementById('analysis-result').innerHTML = '<div style="text-align:center; padding:50px;">⏳ 正在加载分析数据，请稍候...</div>';
+            fetch('/api/analyze_user_data', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({data_id: currentDataId})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentAnalysisData = data;
+                    document.getElementById('analysis-buttons').style.display = 'block';
+                    showStatsSummary();
+                } else {
+                    document.getElementById('analysis-result').innerHTML = `<div style="color:red;">❌ 加载失败: ${data.error}</div>`;
+                    document.getElementById('analysis-buttons').style.display = 'none';
+                }
+            });
+        }
+        
+        // ==================== 弹窗功能 ====================
+        function openModal(title, content) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal').style.display = 'block';
+        }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        window.onclick = function(event) { if (event.target == document.getElementById('modal')) closeModal(); }
+        
+        function showGenderChart() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            openModal('👥 性别分布图', `<div class="chart-container"><img src="data:image/png;base64,${currentAnalysisData.gender_chart}"></div>`);
+        }
+        function showAgeChart() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            openModal('📊 年龄分布图', `<div class="chart-container"><img src="data:image/png;base64,${currentAnalysisData.age_chart}"></div>`);
+        }
+        function showGenreChart() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            openModal('🎬 观影类型偏好图', `<div class="chart-container"><img src="data:image/png;base64,${currentAnalysisData.genre_chart}"></div>`);
+        }
+        function showWatchChart() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            openModal('📈 观影数量分布图', `<div class="chart-container"><img src="data:image/png;base64,${currentAnalysisData.watch_chart}"></div>`);
+        }
+        function showUserTable() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            let html = `<table><thead><tr><th>用户昵称</th><th>性别</th><th>年龄</th><th>观影数量</th><th>平均评分</th></tr></thead><tbody>`;
+            currentAnalysisData.sample_records.forEach(record => {
+                html += `<tr><td>${record.nickname}</td><td>${record.gender}</td><td>${record.age || '-'}</td><td>${record.watch_count}</td><td>${record.avg_rating ? record.avg_rating.toFixed(1) : '-'}</td></tr>`;
+            });
+            html += `</tbody></table><p style="margin-top:15px;">📌 共 ${currentAnalysisData.total_users} 位用户，以上为前5条数据预览</p>`;
+            openModal('📋 用户明细表', html);
+        }
+        function showMovieRanking() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            let html = `<table><thead><tr><th>排名</th><th>电影名称</th><th>观看次数</th></tr></thead><tbody>`;
+            currentAnalysisData.popular_movies.slice(0, 10).forEach((movie, idx) => {
+                html += `<tr><td>${idx + 1}</td><td>《${movie[0]}》</td><td>${movie[1]} 次</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            openModal('🎥 热门电影排行 Top 10', html);
+        }
+        function showGenreRanking() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            let html = `<table><thead><tr><th>排名</th><th>电影类型</th><th>观看次数</th></tr></thead><tbody>`;
+            const genreList = Object.entries(currentAnalysisData.genre_prefs).sort((a,b) => b[1] - a[1]);
+            genreList.slice(0, 10).forEach((genre, idx) => {
+                html += `<tr><td>${idx + 1}</td><td>${genre[0]}</td><td>${genre[1]} 次</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            if (genreList.length === 0) html = '<p>暂无类型数据，请上传包含"观影类型"列的文件</p>';
+            openModal('🏷️ 观影类型偏好排行 Top 10', html);
+        }
+        function showStatsSummary() {
+            if (!currentAnalysisData) { alert('请先加载分析数据'); return; }
+            let fileTypeName = currentAnalysisData.file_type === '.csv' ? 'CSV文件' : (currentAnalysisData.file_type === '.xlsx' ? 'Excel文件' : '文件');
+            let html = `<div class="stats-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:15px;">`;
+            html += `<div class="stat-card"><div class="stat-number">${currentAnalysisData.total_users}</div><div class="stat-label">总用户数</div></div>`;
+            html += `<div class="stat-card"><div class="stat-number">${currentAnalysisData.avg_age}</div><div class="stat-label">平均年龄(岁)</div></div>`;
+            html += `<div class="stat-card"><div class="stat-number">${currentAnalysisData.avg_watch}</div><div class="stat-label">平均观影(部)</div></div>`;
+            html += `<div class="stat-card"><div class="stat-number">${currentAnalysisData.max_watch}</div><div class="stat-label">最高观影(部)</div></div>`;
+            html += `</div><hr><p><strong>📁 文件名:</strong> ${currentAnalysisData.filename}</p>`;
+            html += `<p><strong>📅 上传时间:</strong> ${currentAnalysisData.upload_time}</p>`;
+            html += `<p><strong>📁 文件类型:</strong> ${fileTypeName}</p>`;
+            if (currentAnalysisData.total_movies) html += `<p><strong>🎬 总观影记录:</strong> ${currentAnalysisData.total_movies} 条</p>`;
+            html += `<hr><h4>👥 性别分布</h4>`;
+            for (const [gender, count] of Object.entries(currentAnalysisData.gender_dist)) {
+                const pct = (count / currentAnalysisData.total_users * 100).toFixed(1);
+                html += `<p>${gender}: ${count} 人 (${pct}%)</p>`;
+            }
+            openModal('📊 统计摘要', html);
+        }
+        
+        // ==================== 电影盲盒功能（保留3D动画） ====================
+        async function blindBox() {
+            const dataId = currentDataId;
+            const socialResult = document.getElementById('social-result');
+            
+            if (!dataId) {
+                openDefaultBlindBox();
+                return;
+            }
+            
+            socialResult.innerHTML = `
+                <div class="gift-loading">
+                    <div class="gift-spinner"></div>
+                    <p style="margin-top: 20px; color: #667eea;">🎁 正在分析您的观影偏好...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/get_genre_preferences', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({data_id: dataId})
+                });
+                const result = await response.json();
+                
+                if (result.success && result.has_data && result.top_genres && result.top_genres.length > 0) {
+                    openSmartBlindBox(result);
+                } else {
+                    openDefaultBlindBox();
+                }
+            } catch (error) {
+                console.error('获取类型偏好失败:', error);
+                openDefaultBlindBox();
+            }
+        }
+        
+        function openSmartBlindBox(prefData) {
+            const topGenres = prefData.top_genres;
+            const genreMovies = prefData.genre_movies;
+            
+            let selectedGenre;
+            let isSameType = true;
+            
+            if (Math.random() < 0.7) {
+                const totalWeight = topGenres.reduce((sum, g) => sum + g[1], 0);
+                let random = Math.random() * totalWeight;
+                for (const [genre, count] of topGenres) {
+                    if (random < count) { selectedGenre = genre; break; }
+                    random -= count;
+                }
+                if (!selectedGenre) selectedGenre = topGenres[0][0];
+                isSameType = true;
+            } else {
+                const allGenres = Object.keys(genreMovies);
+                selectedGenre = allGenres[Math.floor(Math.random() * allGenres.length)];
+                isSameType = false;
+            }
+            
+            const movies = genreMovies[selectedGenre] || genreMovies["剧情"];
+            const selectedMovie = movies[Math.floor(Math.random() * movies.length)];
+            
+            let movieInfo = LOCAL_MOVIE_CACHE[selectedMovie] || { rating: '未知', description: '经典电影推荐' };
+            showGiftAnimation(selectedMovie, movieInfo.rating, movieInfo.description, selectedGenre, isSameType, topGenres);
+        }
+        
+        function openDefaultBlindBox() {
+            const defaultMovies = [
+                { name: '肖申克的救赎', rating: 9.7, desc: '希望让人自由，一部关于希望与救赎的经典之作。', genre: '剧情' },
+                { name: '霸王别姬', rating: 9.6, desc: '风华绝代，一曲人生悲歌。', genre: '剧情' },
+                { name: '阿甘正传', rating: 9.5, desc: '人生就像一盒巧克力，你永远不知道下一块是什么味道。', genre: '剧情' },
+                { name: '盗梦空间', rating: 9.4, desc: '梦境与现实，一场关于意识的大胆探索。', genre: '科幻/悬疑' },
+                { name: '星际穿越', rating: 9.4, desc: '穿越时空的爱，人类命运的终极探索。', genre: '科幻' },
+                { name: '泰坦尼克号', rating: 9.5, desc: '永恒的爱情，永不沉没的经典。', genre: '爱情/灾难' },
+                { name: '千与千寻', rating: 9.4, desc: '成长的旅程，宫崎骏的巅峰之作。', genre: '动画/奇幻' }
+            ];
+            const selected = defaultMovies[Math.floor(Math.random() * defaultMovies.length)];
+            showGiftAnimation(selected.name, selected.rating, selected.desc, selected.genre, true, null);
+        }
+        
+        function showGiftAnimation(movieName, rating, description, genre, isSameType, topGenres) {
+            const socialResult = document.getElementById('social-result');
+            
+            let preferenceText = '';
+            if (topGenres && topGenres.length > 0 && !isSameType) {
+                const topGenreNames = topGenres.slice(0, 3).map(g => g[0]).join('、');
+                preferenceText = `<div class="surprise-badge">✨ 惊喜盲盒 ✨<br><small>跳出舒适区，发现不一样的精彩！<br>您常看的是 ${topGenreNames}，今天推荐的是 ${genre} 类型</small></div>`;
+            } else if (topGenres && topGenres.length > 0) {
+                preferenceText = `<div class="match-badge">🎯 基于您的偏好<br><small>根据您常看的 ${genre} 类型精心挑选</small></div>`;
+            } else {
+                preferenceText = `<div class="random-badge">🎲 随机惊喜<br><small>为您随机推荐一部经典电影</small></div>`;
+            }
+            
+            socialResult.innerHTML = `
+                <div class="gift-container">
+                    <div class="gift-box" id="giftBox">
+                        <div class="gift-lid">
+                            <div class="ribbon-horizontal"></div>
+                            <div class="ribbon-vertical"></div>
+                            <div class="bow">
+                                <div class="bow-left"></div>
+                                <div class="bow-right"></div>
+                                <div class="bow-center"></div>
+                            </div>
+                        </div>
+                        <div class="gift-body">
+                            <div class="ribbon-horizontal-body"></div>
+                            <div class="ribbon-vertical-body"></div>
+                        </div>
+                        <div class="sparkles">
+                            <div class="sparkle s1">✨</div>
+                            <div class="sparkle s2">⭐</div>
+                            <div class="sparkle s3">🌟</div>
+                            <div class="sparkle s4">💫</div>
+                            <div class="sparkle s5">🎁</div>
+                        </div>
+                    </div>
+                    <div class="gift-result" id="giftResult" style="display: none;">
+                        <div class="result-card">
+                            <div class="result-icon">🎬</div>
+                            <h3>恭喜你抽到了！</h3>
+                            <div class="movie-title">《${escapeHtml(movieName)}》</div>
+                            <div class="movie-rating">⭐ ${rating}分</div>
+                            <div class="movie-desc">${escapeHtml(description)}</div>
+                            <div class="movie-genre">🎭 类型: ${escapeHtml(genre)}</div>
+                            ${preferenceText}
+                            <button class="btn btn-primary" onclick="blindBox()" style="margin-top: 20px;">🎁 再开一次</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const giftBox = document.getElementById('giftBox');
+            if (giftBox) {
+                giftBox.classList.add('opening');
+                setTimeout(() => {
+                    giftBox.classList.add('opened');
+                    setTimeout(() => {
+                        giftBox.style.display = 'none';
+                        const resultDiv = document.getElementById('giftResult');
+                        if (resultDiv) resultDiv.style.display = 'block';
+                    }, 800);
+                }, 600);
+            } else {
+                const resultDiv = document.getElementById('giftResult');
+                if (resultDiv) resultDiv.style.display = 'block';
+            }
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // ==================== 电影猜谜功能（不限次数，支持电影和电视剧） ====================
+        function startMovieQuiz() {
+            // 随机选择一道题目
+            const randomIndex = Math.floor(Math.random() * MOVIE_QUIZ_DB.length);
+            currentQuiz = { ...MOVIE_QUIZ_DB[randomIndex], index: randomIndex };
+            
+            let cluesHtml = '';
+            currentQuiz.clues.forEach(clue => {
+                cluesHtml += `<div class="quiz-clue-item">🔍 ${clue}</div>`;
+            });
+            
+            const socialResult = document.getElementById('social-result');
+            socialResult.innerHTML = `
+                <div class="quiz-container">
+                    <h3>🎬 电影/电视剧猜谜</h3>
+                    <p style="color: #666; margin-bottom: 15px;">根据以下线索猜出作品名称</p>
+                    <div class="quiz-clues">
+                        ${cluesHtml}
+                    </div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 10px;">
+                        💡 提示：${currentQuiz.hint}
+                    </div>
+                    <input type="text" id="quiz-answer" class="quiz-input" placeholder="请输入作品名称" autocomplete="off">
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-primary" style="width: auto; padding: 8px 25px;" onclick="checkQuizAnswer()">提交答案</button>
+                        <button class="btn btn-info" style="width: auto; padding: 8px 25px;" onclick="startMovieQuiz()">换一题</button>
+                    </div>
+                    <div id="quiz-result" style="margin-top: 20px;"></div>
+                </div>
+            `;
+            
+            // 聚焦输入框
+            setTimeout(() => {
+                const input = document.getElementById('quiz-answer');
+                if (input) input.focus();
+            }, 100);
+        }
+        
+        function checkQuizAnswer() {
+            if (!currentQuiz) {
+                startMovieQuiz();
+                return;
+            }
+            
+            const userAnswer = document.getElementById('quiz-answer').value.trim();
+            const resultDiv = document.getElementById('quiz-result');
+            
+            if (!userAnswer) {
+                resultDiv.innerHTML = `<div class="quiz-result quiz-wrong">❌ 请输入答案！</div>`;
+                return;
+            }
+            
+            // 模糊匹配答案（忽略大小写和空格）
+            const normalizedUser = userAnswer.toLowerCase().replace(/\s/g, '');
+            const normalizedCorrect = currentQuiz.answer.toLowerCase().replace(/\s/g, '');
+            
+            // 支持部分匹配（如输入"肖申克"匹配"肖申克的救赎"）
+            const isCorrect = normalizedCorrect.includes(normalizedUser) || normalizedUser.includes(normalizedCorrect) || normalizedUser === normalizedCorrect;
+            
+            if (isCorrect) {
+                resultDiv.innerHTML = `
+                    <div class="quiz-result quiz-correct">
+                        ✅ 恭喜答对！<br>
+                        🎬 答案是：《${currentQuiz.answer}》<br>
+                        📺 类型：${currentQuiz.type}<br>
+                        ⭐ +10 积分！
+                    </div>
+                `;
+                // 自动换一题
+                setTimeout(() => {
+                    startMovieQuiz();
+                }, 2000);
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="quiz-result quiz-wrong">
+                        ❌ 很遗憾，答案不正确！<br>
+                        💡 正确答案是：《${currentQuiz.answer}》<br>
+                        📺 类型：${currentQuiz.type}<br>
+                        🎯 再试一次吧！
+                    </div>
+                `;
+                // 清空输入框
+                document.getElementById('quiz-answer').value = '';
+                document.getElementById('quiz-answer').focus();
+            }
+        }
+        
+        // ==================== 其他社交互动功能 ====================
+        
+        // 观影挑战
+        let challengeData = { current: 3, target: 7, streak: 2 };
+        function watchChallenge() {
+            let html = `=== 🎯 观影挑战 ===\n\n`;
+            html += `📅 7天观影挑战\n`;
+            html += `进度: ${challengeData.current}/${challengeData.target} (${Math.round(challengeData.current/challengeData.target*100)}%)\n`;
+            html += `连续打卡: ${challengeData.streak} 天\n`;
+            html += `━━━━━━━━━━━━━━━━━━━━\n`;
+            html += `🏆 奖励：完成7天可获得"坚持之星"徽章！\n\n`;
+            html += `💡 点击"打卡"记录今天的观影！\n`;
+            html += `\n[打卡] [查看排行榜]`;
+            document.getElementById('social-result').innerHTML = html;
+        }
+        
+        // 影迷等级
+        function fanLevel() {
+            const watchCount = 45;
+            let level, badge, nextLevel;
+            
+            if (watchCount < 10) {
+                level = "🌱 影迷新秀";
+                badge = "🎬 入门影迷";
+                nextLevel = "再观看 " + (10 - watchCount) + " 部电影升级";
+            } else if (watchCount < 30) {
+                level = "📺 观影达人";
+                badge = "🎥 资深影迷";
+                nextLevel = "再观看 " + (30 - watchCount) + " 部电影升级";
+            } else if (watchCount < 60) {
+                level = "🎬 电影大师";
+                badge = "🏆 影评专家";
+                nextLevel = "再观看 " + (60 - watchCount) + " 部电影升级";
+            } else {
+                level = "👑 影坛宗师";
+                badge = "⭐ 传奇影迷";
+                nextLevel = "已达最高等级，继续观影保持荣誉！";
+            }
+            
+            document.getElementById('social-result').innerHTML = `=== 🏅 影迷等级 ===\n\n当前等级: ${level}\n专属徽章: ${badge}\n观影数量: ${watchCount}部\n${nextLevel}\n\n🎉 继续观影，解锁更高等级！`;
+        }
+        
+        // 电影性格测试
+        function moviePersonalityTest() {
+            const genres = ["科幻", "剧情", "悬疑", "爱情", "喜剧", "动画"];
+            const randomGenre = genres[Math.floor(Math.random() * genres.length)];
+            const characters = {
+                "科幻": "🧪 理性探索者 - 你喜欢思考未来和可能性，对未知充满好奇",
+                "剧情": "📖 深度思考者 - 你善于感受人生百态，追求真实与深度",
+                "悬疑": "🔍 侦探型人格 - 你享受解谜的乐趣，思维缜密",
+                "爱情": "💕 浪漫主义者 - 你相信爱情的美好，情感丰富细腻",
+                "喜剧": "😄 快乐传播者 - 你总能看到生活的阳光，带给他人欢乐",
+                "动画": "🎨 童心守护者 - 你内心永远年轻，保持纯真与想象力"
+            };
+            const recMovies = {
+                "科幻": "《星际穿越》", "剧情": "《肖申克的救赎》", "悬疑": "《盗梦空间》",
+                "爱情": "《怦然心动》", "喜剧": "《三傻大闹宝莱坞》", "动画": "《千与千寻》"
+            };
+            
+            document.getElementById('social-result').innerHTML = `=== 🎭 电影性格测试 ===\n\n根据你的观影偏好分析：\n\n你属于「${characters[randomGenre]}」\n\n🎬 推荐电影：${recMovies[randomGenre]}\n\n📱 分享给你的朋友看看！`;
+        }
+        
+        // 电影推荐交换
+        function exchangeRecommendation() {
+            const friends = ["影迷小张", "电影爱好者", "观影达人", "豆瓣用户", "深夜观影者"];
+            const randomFriend = friends[Math.floor(Math.random() * friends.length)];
+            const recommendations = {
+                "影迷小张": "《肖申克的救赎》- 希望让人自由，永不放弃",
+                "电影爱好者": "《盗梦空间》- 梦境与现实，烧脑神作",
+                "观影达人": "《星际穿越》- 穿越时空的爱，震撼心灵",
+                "豆瓣用户": "《千与千寻》- 成长的旅程，温暖治愈",
+                "深夜观影者": "《海上钢琴师》- 1900的故事，自由与孤独"
+            };
+            
+            document.getElementById('social-result').innerHTML = `=== 🎁 电影推荐交换 ===\n\n📬 ${randomFriend} 给你推荐了：\n\n${recommendations[randomFriend]}\n\n💡 点击"回复推荐"可以给对方推荐电影！\n\n[回复推荐] [查看历史]`;
+        }
+        
+        // 电影盲约
+        function randomMovieDate() {
+            const movies = ["肖申克的救赎", "盗梦空间", "千与千寻", "星际穿越", "怦然心动", "阿甘正传", "泰坦尼克号"];
+            const randomMovie = movies[Math.floor(Math.random() * movies.length)];
+            const matchUsers = ["🎭 电影爱好者", "🎬 影迷小王", "📺 深夜观影者", "🌟 星光影迷", "🎪 周末观影团"];
+            const randomUser = matchUsers[Math.floor(Math.random() * matchUsers.length)];
+            
+            document.getElementById('social-result').innerHTML = `=== 🎲 电影盲约 ===\n\n✨ 匹配成功！\n\n👤 匹配用户: ${randomUser}\n🎬 共同观看: 《${randomMovie}》\n\n💬 观影后可以一起交流感受！\n\n[发送邀请] [随机匹配]`;
+        }
+        
+        // 观影日记
+        let diaryEntries = [
+            { date: "2024-01-15", movie: "肖申克的救赎", feeling: "震撼，希望的力量", rating: 10 },
+            { date: "2024-01-20", movie: "盗梦空间", feeling: "烧脑，意犹未尽", rating: 9 },
+            { date: "2024-01-25", movie: "千与千寻", feeling: "温暖治愈", rating: 9 }
+        ];
+        function watchDiary() {
+            let html = `=== 📔 我的观影日记 ===\n\n`;
+            diaryEntries.forEach(entry => {
+                html += `📅 ${entry.date}\n`;
+                html += `🎬 《${entry.movie}》\n`;
+                html += `💭 ${entry.feeling}\n`;
+                html += `⭐ 评分: ${entry.rating}/10\n`;
+                html += `━━━━━━━━━━━━━━━━━━━━\n`;
+            });
+            html += `\n💡 点击"记录"可添加新的观影感受\n\n[记录新日记] [分享日记]`;
+            document.getElementById('social-result').innerHTML = html;
+        }
+        
+        // 影迷匹配
+        function matchFans() {
+            document.getElementById('social-result').innerHTML = `=== 👥 影迷匹配 ===\n\n与您口味相似的用户:\n\n  • 影迷小张 - 相似度 85%\n  • 电影爱好者 - 相似度 76%\n  • 观影达人 - 相似度 72%\n  • 豆瓣用户 - 相似度 68%\n\n💡 点击用户头像可以查看对方的观影记录`;
+        }
+        
+        // 年度影迷总结
+        function annualSummary() {
+            document.getElementById('social-result').innerHTML = `=== 📅 2024年度影迷总结 ===\n\n🎬 全年观影: 45部\n⏰ 观影时长: 90小时\n⭐ 平均评分: 8.2分\n🏆 年度最爱: 《奥本海默》\n🎭 最爱的导演: 克里斯托弗·诺兰\n🎬 最爱的演员: 莱昂纳多\n\n🎉 恭喜你成为影迷达人！\n📊 超越全国95%的用户`;
+        }
+        
+        // 页面初始化
+        updateUserInfo();
+        loadUserDataList();
+    </script>
+    
+    {% include 'ai_chat_widget.html' %}
+</body>
+</html>
