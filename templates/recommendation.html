@@ -21,8 +21,15 @@
         .btn-primary { background: #667eea; color: white; }
         .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
         .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; transform: translateY(-2px); }
         .btn-info { background: #4299e1; color: white; }
+        .btn-info:hover { background: #3182ce; transform: translateY(-2px); }
         .btn-warning { background: #ecc94b; color: #744210; }
+        .btn-warning:hover { background: #d69e2e; transform: translateY(-2px); }
+        .btn-danger { background: #f56565; color: white; }
+        .btn-danger:hover { background: #e53e3e; transform: translateY(-2px); }
+        .btn-upload { background: #9f7aea; color: white; }
+        .btn-upload:hover { background: #805ad5; transform: translateY(-2px); }
         .result-area { background: #f7fafc; border-radius: 10px; padding: 20px; min-height: 400px; }
         .movie-card { border-bottom: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px; transition: all 0.3s; }
         .movie-card:hover { background: #f7fafc; transform: translateX(5px); }
@@ -33,153 +40,408 @@
         .movie-meta { color: #999; font-size: 12px; margin-top: 8px; }
         .model-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 15px; }
         .loading { text-align: center; padding: 50px; color: #999; }
+        .arch-badge { background: #48bb78; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; margin-left: 10px; }
+        .recall-badge { background: #4299e1; }
+        .rank-badge { background: #ed8936; }
+        .status-card { background: #edf2f7; border-radius: 10px; padding: 12px; margin-bottom: 15px; font-size: 13px; }
+        .status-card .label { font-weight: bold; color: #4a5568; }
+        .data-selector { margin: 15px 0; padding: 15px; background: #f0f0f0; border-radius: 10px; display: none; }
+        .data-selector select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-top: 8px; }
+        .data-selector .hint { font-size: 12px; color: #666; margin-top: 8px; }
+        .match-reason { font-size: 11px; color: #48bb78; margin-top: 5px; }
         @media (max-width: 768px) { .btn { width: 100%; } .nav-links a { font-size: 12px; padding: 5px 10px; } }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="logo">🎬 豆瓣电影分析</a>
-            <div class="nav-links">
-                <a href="/">首页</a>
-                <a href="/movie_analysis_hub">影视分析</a>
-                <a href="/recommendation" class="active">推荐引擎</a>
-                <a href="/social_hub">社交管理</a>
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/" class="logo">🎬 豆瓣电影分析</a>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/movie_analysis_hub">影视分析</a>
+            <a href="/recommendation" class="active">推荐引擎</a>
+            <a href="/social_hub">社交管理</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <div class="model-badge">
+            🧠 深度学习推荐引擎 | 召回层(向量检索) + 排序层(神经协同过滤NCF)
+        </div>
+        <div id="model-status" class="status-card">
+            <span class="label">📊 模型状态:</span> <span id="status-text">检测中...</span>
+            <span id="model-info" style="display: block; font-size: 12px; margin-top: 5px;"></span>
+        </div>
+        <h2>🎯 智能电影推荐</h2>
+        <p style="color: #666; margin-bottom: 20px;">
+            🔍 <strong>召回层</strong>: 基于用户/物品Embedding向量检索，快速筛选200个候选<br>
+            🎯 <strong>排序层</strong>: 神经协同过滤(NCF)深度模型精排，输出最匹配的Top-N
+        </p>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="getRecommendation('deep')">🧠 深度学习推荐</button>
+            <button class="btn btn-success" onclick="getRecommendation('hybrid')">🎲 混合推荐</button>
+            <button class="btn btn-info" onclick="getRecommendation('emotion')">😊 情绪感知推荐</button>
+            <button class="btn btn-warning" onclick="getRecommendation('hot')">🔥 热门推荐</button>
+            <button class="btn btn-danger" onclick="trainModel()" id="train-btn">🔄 重新训练模型</button>
+            <button class="btn btn-upload" onclick="showUploadedDataSelector()" id="show-upload-btn">📁 基于上传数据推荐</button>
+        </div>
+
+        <!-- 上传数据选择器 -->
+        <div id="uploaded-data-selector" class="data-selector">
+            <label style="font-weight: bold; display: block; margin-bottom: 8px;">📂 选择已上传的用户数据文件：</label>
+            <select id="uploaded-data-select">
+                <option value="">请选择已上传的数据文件</option>
+            </select>
+            <div class="hint">
+                💡 提示：请在"社交管理"页面上传Excel/CSV文件后，在此选择文件进行推荐
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn btn-primary" onclick="getRecommendationByUploadedData()" style="flex: 1;">🎬 开始推荐</button>
+                <button class="btn btn-info" onclick="hideUploadedDataSelector()" style="flex: 0;">取消</button>
             </div>
         </div>
-    </nav>
-    
-    <div class="container">
-        <div class="card">
-            <div class="model-badge">🧠 智能推荐引擎 | 协同过滤 + 内容特征 + 混合推荐</div>
-            <h2>🎯 智能电影推荐</h2>
-            <p style="color: #666; margin-bottom: 20px;">基于您的观影历史和评分，结合电影类型、导演、演员等特征，为您推荐最合适的电影。</p>
-            
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="getRecommendation('neural')">🧠 智能推荐 (Top-5)</button>
-                <button class="btn btn-success" onclick="getRecommendation('hybrid')">🎲 混合推荐</button>
-                <button class="btn btn-info" onclick="getRecommendation('emotion')">😊 情绪感知推荐</button>
-                <button class="btn btn-warning" onclick="getRecommendation('hot')">🔥 热门推荐</button>
-            </div>
-            
-            <div id="recommend-result" class="result-area">
-                <div style="text-align: center; color: #999; padding: 50px;">
-                    点击上方按钮获取个性化推荐<br>
-                    🤖 智能推荐会根据您的观影记录分析偏好
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2>💡 推荐算法说明</h2>
-            <div style="color: #666; line-height: 1.8;">
-                <p><strong>🧠 智能推荐 (协同过滤 + 内容特征)</strong><br>
-                结合用户历史评分、电影类型、导演、年份等特征，计算用户对未观看电影的预测评分，推荐Top-N电影。</p>
-                <p><strong>🎲 混合推荐</strong><br>
-                结合内容过滤和协同过滤，综合推荐热门高分电影，适合新用户。</p>
-                <p><strong>😊 情绪感知推荐</strong><br>
-                根据心情推荐治愈系、励志系等不同类型的电影。</p>
-                <p><strong>🔥 热门推荐</strong><br>
-                基于豆瓣评分和热度，推荐当前最受欢迎的经典电影。</p>
+
+        <div id="recommend-result" class="result-area">
+            <div style="text-align: center; color: #999; padding: 50px;">
+                点击上方按钮获取个性化推荐<br>
+                🤖 深度学习模型会分析您的观影偏好<br>
+                📁 也可上传Excel/CSV文件进行数据分析推荐
             </div>
         </div>
     </div>
-    
-    <script>
-        let currentUser = 'user_001';
-        
-        function getUserInfo() {
-            fetch('/api/user/info')
-                .then(res => res.json())
-                .then(data => {
-                    currentUser = data.username;
-                })
-                .catch(() => {});
+
+    <div class="card">
+        <h2>💡 推荐算法说明</h2>
+        <div style="color: #666; line-height: 1.8;">
+            <p><strong>🧠 深度学习推荐 (召回层 + 排序层)</strong><br>
+                📍 <span style="color:#4299e1">召回层</span>: 用户/物品Embedding向量 + 余弦相似度检索，从全部电影中快速筛选200个候选<br>
+                📍 <span style="color:#ed8936">排序层</span>: 神经协同过滤(NCF)深度模型，结合GMF和MLP，对候选集精排输出Top-N</p>
+            <p><strong>🎲 混合推荐</strong><br>
+                结合深度学习排序和热门推荐，综合推荐高分电影。</p>
+            <p><strong>😊 情绪感知推荐</strong><br>
+                根据心情推荐治愈系、励志系等不同类型的电影。</p>
+            <p><strong>🔥 热门推荐</strong><br>
+                基于豆瓣评分和热度，推荐当前最受欢迎的经典电影。</p>
+            <p><strong>📁 基于上传数据推荐</strong><br>
+                上传Excel/CSV文件后，系统会分析文件中的观影记录和类型偏好，生成个性化推荐。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUser = 'user_001';
+
+    // 获取用户信息
+    function getUserInfo() {
+        fetch('/api/user/info')
+            .then(res => res.json())
+            .then(data => {
+                currentUser = data.username;
+            })
+            .catch(() => {});
+    }
+
+    // 获取模型状态
+    function getModelStatus() {
+        fetch('/api/recommender_status')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const statusText = document.getElementById('status-text');
+                    const modelInfo = document.getElementById('model-info');
+                    if (data.is_trained) {
+                        statusText.innerHTML = '✅ 已训练';
+                        statusText.style.color = '#48bb78';
+                        modelInfo.innerHTML = `📊 用户数: ${data.num_users} | 🎬 电影数: ${data.num_movies} | 🔢 嵌入维度: ${data.embedding_dim}`;
+                    } else {
+                        statusText.innerHTML = '⚠️ 未训练 (使用基础推荐)';
+                        statusText.style.color = '#ed8936';
+                        modelInfo.innerHTML = '点击"重新训练模型"开始训练';
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+
+    // 训练模型
+    function trainModel() {
+        const trainBtn = document.getElementById('train-btn');
+        trainBtn.disabled = true;
+        trainBtn.textContent = '⏳ 训练中...';
+
+        const resultDiv = document.getElementById('recommend-result');
+        resultDiv.innerHTML = '<div class="loading">⏳ 正在训练深度学习模型...<br>📊 训练可能需要30-60秒<br>🤖 训练完成后将自动更新推荐结果</div>';
+
+        fetch('/api/train_recommender', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({epochs: 30})
+        })
+            .then(res => res.json())
+            .then(data => {
+                trainBtn.disabled = false;
+                trainBtn.textContent = '🔄 重新训练模型';
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="loading" style="color: #48bb78;">✅ ${data.message}<br>📉 最终损失: ${data.final_loss?.toFixed(4) || 'N/A'}</div>`;
+                    getModelStatus();
+                    setTimeout(() => getRecommendation('deep'), 2000);
+                } else {
+                    resultDiv.innerHTML = `<div class="loading" style="color: #f56565;">❌ ${data.error}</div>`;
+                }
+            })
+            .catch(err => {
+                trainBtn.disabled = false;
+                trainBtn.textContent = '🔄 重新训练模型';
+                resultDiv.innerHTML = `<div class="loading" style="color: #f56565;">❌ 训练失败: ${err.message}</div>`;
+            });
+    }
+
+    // 显示上传数据选择器
+    function showUploadedDataSelector() {
+        const selector = document.getElementById('uploaded-data-selector');
+        if (selector.style.display === 'block') {
+            selector.style.display = 'none';
+            document.getElementById('show-upload-btn').textContent = '📁 基于上传数据推荐';
+        } else {
+            loadUploadedDataList();
+            selector.style.display = 'block';
+            document.getElementById('show-upload-btn').textContent = '📁 收起选择器';
         }
-        
-        function getRecommendation(type) {
-            const resultDiv = document.getElementById('recommend-result');
-            resultDiv.innerHTML = '<div class="loading">⏳ 正在计算推荐结果...<br>🤖 智能模型正在分析您的观影偏好</div>';
-            
-            if (type === 'emotion') {
-                resultDiv.innerHTML = `
-                    <div class="movie-card">
-                        <div class="movie-title">😊 治愈系推荐</div>
-                        <div class="movie-desc">海蒂和爷爷、小森林、入殓师、夏目友人帐、龙猫</div>
-                        <div class="movie-meta">适合想要放松心情、寻求温暖的时刻</div>
-                    </div>
-                    <div class="movie-card">
-                        <div class="movie-title">🔥 励志系推荐</div>
-                        <div class="movie-desc">当幸福来敲门、阿甘正传、摔跤吧爸爸、肖申克的救赎、放牛班的春天</div>
-                        <div class="movie-meta">适合需要动力、想要激励自己的时刻</div>
-                    </div>
-                    <div class="movie-card">
-                        <div class="movie-title">🚀 科幻系推荐</div>
-                        <div class="movie-desc">星际穿越、盗梦空间、2001太空漫游、银翼杀手、黑客帝国</div>
-                        <div class="movie-meta">适合喜欢思考、探索未知的时刻</div>
-                    </div>
-                    <div class="movie-card">
-                        <div class="movie-title">❤️ 爱情系推荐</div>
-                        <div class="movie-desc">怦然心动、泰坦尼克号、你的名字、情书、真爱至上</div>
-                        <div class="movie-meta">适合感受浪漫、温暖爱情的时刻</div>
-                    </div>
+    }
+
+    // 隐藏上传数据选择器
+    function hideUploadedDataSelector() {
+        document.getElementById('uploaded-data-selector').style.display = 'none';
+        document.getElementById('show-upload-btn').textContent = '📁 基于上传数据推荐';
+    }
+
+    // 加载上传的数据列表
+    function loadUploadedDataList() {
+        fetch('/api/get_user_data_list')
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('uploaded-data-select');
+                select.innerHTML = '<option value="">请选择已上传的数据文件</option>';
+                if (data.success && data.data_list && data.data_list.length > 0) {
+                    data.data_list.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.data_id;
+                        let movieInfo = item.total_movies ? `, ${item.total_movies}部电影` : '';
+                        let formatText = item.format === 'long' ? '长格式' : (item.format === 'wide' ? '宽格式' : '简化格式');
+                        option.text = `${item.filename} (${item.total_users}位用户${movieInfo}, ${formatText})`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.text = '暂无上传数据，请先在社交管理页面上传文件';
+                    select.appendChild(option);
+                }
+            })
+            .catch(err => console.error('加载数据列表失败:', err));
+    }
+
+    // 基于上传数据推荐
+    function getRecommendationByUploadedData() {
+        const select = document.getElementById('uploaded-data-select');
+        const dataId = select.value;
+
+        if (!dataId) {
+            alert('请先选择上传的数据文件');
+            return;
+        }
+
+        const resultDiv = document.getElementById('recommend-result');
+        resultDiv.innerHTML = '<div class="loading">⏳ 正在分析上传数据并生成推荐...<br>📊 基于您的观影记录和偏好进行智能推荐</div>';
+
+        fetch('/api/recommend_by_uploaded_data', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({data_id: dataId, top_n: 8})
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.recommendations && data.recommendations.length > 0) {
+                    let html = `<div style="margin-bottom: 15px; padding: 10px; background: #e6fffa; border-radius: 8px;">
+                                    🤖 推荐方法: ${data.method}<br>
+                                    📁 数据文件: ${getSelectedFileName(dataId)}<br>
+                                    🎬 推荐数量: ${data.total_recommendations}部
+                                </div>`;
+
+                    data.recommendations.forEach((movie, i) => {
+                        let matchReason = movie.match_reason ? `<div class="match-reason">${movie.match_reason}</div>` : '';
+                        html += `
+                            <div class="movie-card">
+                                <div class="movie-title">
+                                    ${i+1}. 《${escapeHtml(movie.title)}》
+                                    <span class="movie-score">🎯 推荐分: ${movie.recommendation_score}</span>
+                                </div>
+                                <div class="movie-rating">⭐ ${movie.rating}分</div>
+                                <div class="movie-desc">${escapeHtml(movie.description)}</div>
+                                <div class="movie-meta">
+                                    🎬 ${escapeHtml(movie.director)} | 🎭 ${escapeHtml(movie.genre)} | 📅 ${movie.year}
+                                </div>
+                                ${matchReason}
+                            </div>
+                        `;
+                    });
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<div style="text-align: center; color: #f56565;">❌ 暂无推荐结果，可能数据文件中的观影记录较少或已看过的电影都已推荐</div>';
+                }
+            })
+            .catch(err => {
+                resultDiv.innerHTML = `<div style="text-align: center; color: #f56565;">❌ 请求失败: ${err.message}</div>`;
+            });
+    }
+
+    // 获取选中的文件名
+    function getSelectedFileName(dataId) {
+        const select = document.getElementById('uploaded-data-select');
+        const option = select.options[select.selectedIndex];
+        return option ? option.text.split(' (')[0] : dataId;
+    }
+
+    // HTML转义
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 获取推荐
+    function getRecommendation(type) {
+        const resultDiv = document.getElementById('recommend-result');
+        resultDiv.innerHTML = '<div class="loading">⏳ 正在计算推荐结果...<br>🔍 召回层筛选候选集 → 🎯 排序层精排打分</div>';
+
+        if (type === 'emotion') {
+            resultDiv.innerHTML = `
+                    <div class="movie-card"><div class="movie-title">😊 治愈系推荐</div><div class="movie-desc">海蒂和爷爷、小森林、入殓师、夏目友人帐、龙猫</div><div class="movie-meta">适合想要放松心情、寻求温暖的时刻</div></div>
+                    <div class="movie-card"><div class="movie-title">🔥 励志系推荐</div><div class="movie-desc">当幸福来敲门、阿甘正传、摔跤吧爸爸、肖申克的救赎、放牛班的春天</div><div class="movie-meta">适合需要动力、想要激励自己的时刻</div></div>
+                    <div class="movie-card"><div class="movie-title">🚀 科幻系推荐</div><div class="movie-desc">星际穿越、盗梦空间、2001太空漫游、银翼杀手、黑客帝国</div><div class="movie-meta">适合喜欢思考、探索未知的时刻</div></div>
+                    <div class="movie-card"><div class="movie-title">❤️ 爱情系推荐</div><div class="movie-desc">怦然心动、泰坦尼克号、你的名字、情书、真爱至上</div><div class="movie-meta">适合感受浪漫、温暖爱情的时刻</div></div>
                 `;
-                return;
-            }
-            
-            if (type === 'hot') {
-                resultDiv.innerHTML = `
+            return;
+        }
+
+        if (type === 'hot') {
+            resultDiv.innerHTML = `
                     <div class="movie-card"><div class="movie-title">1. 肖申克的救赎</div><div class="movie-rating">⭐ 9.7分</div><div class="movie-desc">希望让人自由，一部关于希望与救赎的经典之作。</div><div class="movie-meta">🎬 弗兰克·德拉邦特 | 🎭 剧情</div></div>
                     <div class="movie-card"><div class="movie-title">2. 霸王别姬</div><div class="movie-rating">⭐ 9.6分</div><div class="movie-desc">风华绝代，一曲人生悲歌。</div><div class="movie-meta">🎬 陈凯歌 | 🎭 剧情</div></div>
                     <div class="movie-card"><div class="movie-title">3. 阿甘正传</div><div class="movie-rating">⭐ 9.5分</div><div class="movie-desc">人生就像一盒巧克力，你永远不知道下一块是什么味道。</div><div class="movie-meta">🎬 罗伯特·泽米吉斯 | 🎭 剧情</div></div>
                     <div class="movie-card"><div class="movie-title">4. 泰坦尼克号</div><div class="movie-rating">⭐ 9.5分</div><div class="movie-desc">永恒的爱情，永不沉没的经典。</div><div class="movie-meta">🎬 詹姆斯·卡梅隆 | 🎭 爱情/灾难</div></div>
                     <div class="movie-card"><div class="movie-title">5. 盗梦空间</div><div class="movie-rating">⭐ 9.4分</div><div class="movie-desc">梦境与现实，一场关于意识的大胆探索。</div><div class="movie-meta">🎬 克里斯托弗·诺兰 | 🎭 科幻/悬疑</div></div>
+                    <div class="movie-card"><div class="movie-title">6. 星际穿越</div><div class="movie-rating">⭐ 9.4分</div><div class="movie-desc">穿越时空的爱，人类命运的终极探索。</div><div class="movie-meta">🎬 克里斯托弗·诺兰 | 🎭 科幻</div></div>
                 `;
-                return;
-            }
-            
+            return;
+        }
+
+        if (type === 'hybrid') {
+            // 混合推荐
             fetch('/api/recommend', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: currentUser, top_n: 5})
+                body: JSON.stringify({user_id: currentUser, top_n: 8})
             })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        let html = `<div style="margin-bottom: 15px; padding: 10px; background: #e6fffa; border-radius: 8px;">
+                                        🤖 推荐方法: ${data.method}<br>
+                                        👤 用户: ${data.user_id}
+                                    </div>`;
+                        if (data.model_trained === false) {
+                            html += `<div style="margin-bottom: 15px; padding: 10px; background: #feebc8; border-radius: 8px;">
+                                        ⚠️ 深度学习模型未训练，正在使用基础推荐<br>
+                                        💡 点击"重新训练模型"开启智能推荐
+                                    </div>`;
+                        }
+                        data.recommendations.forEach((movie, i) => {
+                            html += `
+                                <div class="movie-card">
+                                    <div class="movie-title">
+                                        ${i+1}. 《${escapeHtml(movie.title)}》
+                                        <span class="movie-score">🎯 推荐分: ${movie.recommendation_score || movie.predicted_score || movie.rating}</span>
+                                    </div>
+                                    <div class="movie-rating">⭐ ${movie.rating}分</div>
+                                    <div class="movie-desc">${escapeHtml(movie.description)}</div>
+                                    <div class="movie-meta">
+                                        🎬 ${escapeHtml(movie.director)} | 🎭 ${escapeHtml(movie.genre)} | 📅 ${movie.year}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = '<div style="text-align: center; color: #f56565;">❌ 获取推荐失败</div>';
+                    }
+                })
+                .catch(err => {
+                    resultDiv.innerHTML = `<div style="text-align: center; color: #f56565;">❌ 请求失败: ${err.message}</div>`;
+                });
+            return;
+        }
+
+        // 深度学习推荐
+        fetch('/api/recommend', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: currentUser, top_n: 8})
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
                     let html = `<div style="margin-bottom: 15px; padding: 10px; background: #e6fffa; border-radius: 8px;">
                                     🤖 推荐方法: ${data.method}<br>
                                     👤 用户: ${data.user_id}
+                                    <div style="margin-top: 5px; font-size: 12px;">
+                                        <span style="display: inline-block; background:#4299e1; color:white; padding:2px 8px; border-radius:12px;">🔍 召回层</span>
+                                        → <span style="display: inline-block; background:#ed8936; color:white; padding:2px 8px; border-radius:12px;">🎯 排序层(NCF)</span>
+                                    </div>
                                 </div>`;
-                    
+                    if (data.model_trained === false) {
+                        html += `<div style="margin-bottom: 15px; padding: 10px; background: #feebc8; border-radius: 8px;">
+                                    ⚠️ 深度学习模型未训练，正在使用基础推荐<br>
+                                    💡 点击"重新训练模型"开启召回+排序智能推荐
+                                </div>`;
+                    }
                     data.recommendations.forEach((movie, i) => {
                         html += `
                             <div class="movie-card">
                                 <div class="movie-title">
-                                    ${i+1}. 《${movie.title}》
-                                    <span class="movie-score">推荐分: ${movie.score}</span>
+                                    ${i+1}. 《${escapeHtml(movie.title)}》
+                                    <span class="movie-score">🎯 推荐分: ${movie.recommendation_score || movie.predicted_score || movie.rating}</span>
                                 </div>
                                 <div class="movie-rating">⭐ ${movie.rating}分</div>
-                                <div class="movie-desc">${movie.description}</div>
+                                <div class="movie-desc">${escapeHtml(movie.description)}</div>
                                 <div class="movie-meta">
-                                    🎬 ${movie.director} | 🎭 ${movie.genre} | 📅 ${movie.year}
+                                    🎬 ${escapeHtml(movie.director)} | 🎭 ${escapeHtml(movie.genre)} | 📅 ${movie.year}
                                 </div>
                             </div>
                         `;
                     });
-                    
                     resultDiv.innerHTML = html;
                 } else {
-                    resultDiv.innerHTML = '<div style="text-align: center; color: #f56565;">❌ 获取推荐失败，请稍后重试</div>';
+                    resultDiv.innerHTML = '<div style="text-align: center; color: #f56565;">❌ 获取推荐失败</div>';
                 }
             })
             .catch(err => {
                 resultDiv.innerHTML = `<div style="text-align: center; color: #f56565;">❌ 请求失败: ${err.message}</div>`;
             });
-        }
-        
-        getUserInfo();
-    </script>
-    
-    {% include 'ai_chat_widget.html' %}
+    }
+
+    // 页面加载时初始化
+    getUserInfo();
+    getModelStatus();
+</script>
+
+{% include 'ai_chat_widget.html' %}
 </body>
 </html>
