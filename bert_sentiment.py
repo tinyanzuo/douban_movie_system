@@ -1,23 +1,24 @@
 """
-BERT中文情感分析模型
-使用预训练的BERT模型进行三分类情感分析（正面/中性/负面）
+BERT中文情感分析模型 - 微调版
+使用微调分类头进行三分类情感分析
 """
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer, AutoModel, get_linear_schedule_with_warmup
-from torch.optim import AdamW
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import torch.nn.functional as F
+from transformers import AutoTokenizer, AutoModel
+from torch.optim import AdamW  # 使用 PyTorch 的 AdamW，兼容性最好
+from torch.utils.data import DataLoader, Dataset
 import numpy as np
-import json
 import os
-import pickle
+import re
+import json
+import hashlib
 from collections import Counter
+from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings('ignore')
 
-# 豆瓣真实评论数据（扩充版）
+# ==================== 豆瓣真实评论数据 ====================
 DOUBAN_REAL_REVIEWS = {
     "positive": [
         "太震撼了！看完久久不能平静，绝对是年度最佳！",
@@ -45,11 +46,11 @@ DOUBAN_REAL_REVIEWS = {
         "看完久久不能平静，已经开始二刷了。",
         "这才是我想看到的中国电影，有深度有温度。",
         "特效震撼，剧情烧脑，神作无疑！",
-        "太精彩了！从头到尾都没有冷场，强烈安利！",
-        "看完热血沸腾，这才是我们需要的国产大片！",
-        "剧本扎实，演技在线，制作精良，无可挑剔。",
-        "感动到流泪，这部电影让我重新思考了人生。",
-        "二刷依然感动，每次看都有新的收获。",
+        "太精彩了！全程高能，看得我热血沸腾！",
+        "非常感动，看完哭得稀里哗啦。",
+        "很棒的电影，剧情紧凑，演员演技在线。",
+        "值得一看的好电影，强烈安利！",
+        "太棒了，完全超出了我的预期！"
     ],
     "neutral": [
         "还行吧，中规中矩，没有想象中那么好。",
@@ -72,10 +73,11 @@ DOUBAN_REAL_REVIEWS = {
         "典型的爆米花电影，看完就忘。",
         "及格分，没有什么特别想说的地方。",
         "不好不坏，属于看过就忘的类型。",
-        "没有太多亮点，但也没有明显缺点。",
-        "平平无奇，就是一部普通的电影。",
-        "可看可不看，不是特别推荐。",
-        "整体还行，但不会让人印象深刻。",
+        "还行，但不会看第二遍。",
+        "普普通通，没什么特别的亮点。",
+        "可以看，但没必要特意去电影院。",
+        "一般水平，没有特别惊艳的地方。",
+        "中规中矩的及格作品。"
     ],
     "negative": [
         "太失望了！完全浪费时间和金钱。",
@@ -102,16 +104,67 @@ DOUBAN_REAL_REVIEWS = {
         "整部电影就像是在凑时长，毫无看点。",
         "看完只觉得被欺骗了，差评！",
         "逻辑硬伤太多，完全经不起推敲。",
-        "看得我想睡觉，太无聊了。",
-        "这就是传说中的烂片，名不虚传。",
-        "完全不能理解好评哪里来的，太假了。",
-        "浪费时间，还不如在家睡觉。",
+        "烂片，千万别看！",
+        "太差了，浪费钱！"
     ]
 }
 
 
+class BERTSentimentClassifier(nn.Module):
+    """BERT情感分类器 - 带微调分类头"""
+
+    def __init__(self, model_name='bert-base-chinese', num_classes=3, dropout_rate=0.3):
+        super(BERTSentimentClassifier, self).__init__()
+
+        # 加载预训练BERT
+        print(f"📥 加载BERT模型: {model_name}")
+        self.bert = AutoModel.from_pretrained(model_name)
+        self.num_classes = num_classes
+        self.hidden_size = self.bert.config.hidden_size
+
+        # 微调分类头（3层全连接网络）
+        self.dropout = nn.Dropout(dropout_rate)
+        self.classifier = nn.Sequential(
+            nn.Linear(self.hidden_size, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(128, num_classes)
+        )
+
+        self._init_weights()
+
+    def _init_weights(self):
+        """初始化分类头权重"""
+        for module in self.classifier.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.constant_(module.bias, 0)
+
+    def forward(self, input_ids, attention_mask, token_type_ids=None):
+        """前向传播"""
+        outputs = self.bert(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids
+        )
+
+        # 使用[CLS] token的表示
+        cls_output = outputs.pooler_output
+
+        # 分类头
+        cls_output = self.dropout(cls_output)
+        logits = self.classifier(cls_output)
+
+        return logits
+
+
 class SentimentDataset(Dataset):
     """情感分析数据集"""
+
     def __init__(self, texts, labels, tokenizer, max_length=128):
         self.texts = texts
         self.labels = labels
@@ -134,246 +187,233 @@ class SentimentDataset(Dataset):
         )
 
         return {
-            'input_ids': encoding['input_ids'].flatten(),
-            'attention_mask': encoding['attention_mask'].flatten(),
-            'labels': torch.tensor(label, dtype=torch.long)
+            'input_ids': encoding['input_ids'].squeeze(0),
+            'attention_mask': encoding['attention_mask'].squeeze(0),
+            'label': torch.tensor(label, dtype=torch.long)
         }
 
 
-class BERTSentimentClassifier(nn.Module):
-    """BERT情感分类模型"""
-    def __init__(self, model_name='bert-base-chinese', num_classes=3, dropout=0.3):
-        super(BERTSentimentClassifier, self).__init__()
-        self.bert = AutoModel.from_pretrained(model_name)
-        self.dropout = nn.Dropout(dropout)
-        self.classifier = nn.Linear(self.bert.config.hidden_size, num_classes)
+class FineTunedBERTSentimentAnalyzer:
+    """微调版BERT情感分析器"""
 
-    def forward(self, input_ids, attention_mask):
-        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        pooled_output = outputs.pooler_output
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
-        return logits
-
-
-class BERTSentimentAnalyzer:
-    """BERT情感分析器"""
-
-    def __init__(self, model_name='bert-base-chinese', device=None, use_pretrained=True):
-        """
-        初始化BERT情感分析器
-
-        Args:
-            model_name: BERT模型名称，可选 'bert-base-chinese', 'hfl/rbt3' 等
-            device: 运行设备，None表示自动选择
-            use_pretrained: 是否使用预训练模型（如果为False，将使用规则匹配）
-        """
-        self.model_name = model_name
+    def __init__(self, model_path='bert_finetuned_sentiment.pth', device=None):
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model_path = model_path
         self.tokenizer = None
         self.model = None
-        self.is_trained = False
-        self.label_map = {0: 'positive', 1: 'neutral', 2: 'negative'}
-        self.idx_to_label = {0: 'positive', 1: 'neutral', 2: 'negative'}
-        self.use_pretrained = use_pretrained
 
-        print(f"\n{'='*50}")
-        print(f"正在初始化BERT情感分析器...")
-        print(f"设备: {self.device}")
-        print(f"模型: {model_name}")
-        print(f"{'='*50}")
+        # 标签映射: 0=负面, 1=中性, 2=正面
+        self.label_map = {0: 'negative', 1: 'neutral', 2: 'positive'}
+        self.sentiment_to_idx = {'negative': 0, 'neutral': 1, 'positive': 2}
 
-        if use_pretrained:
-            try:
-                # 初始化tokenizer
-                print("正在加载tokenizer...")
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-                print("✅ Tokenizer加载成功")
+        print(f"\n{'='*60}")
+        print(f"🤖 初始化微调版BERT情感分析器")
+        print(f"💻 设备: {self.device}")
+        print(f"💾 模型路径: {model_path}")
+        print(f"{'='*60}")
 
-                # 尝试加载已训练的模型
-                if os.path.exists('best_bert_sentiment.pth'):
-                    print("发现已训练的模型，正在加载...")
-                    self._load_model('best_bert_sentiment.pth')
-                    self.is_trained = True
-                    print("✅ 已训练模型加载成功")
-                else:
-                    # 训练新模型
-                    print("未找到已训练模型，开始训练...")
-                    self._train_model()
-            except Exception as e:
-                print(f"⚠️ BERT模型初始化失败: {e}")
-                print("将使用规则匹配作为备选方案")
-                self.use_pretrained = False
-                self.is_trained = False
+        self._initialize()
+
+    def _initialize(self):
+        """初始化模型和tokenizer"""
+        # 加载tokenizer
+        print("📥 加载tokenizer...")
+        self.tokenizer = AutoTokenizer.from_pretrained('bert-base-chinese')
+
+        # 加载或创建模型
+        if os.path.exists(self.model_path):
+            print(f"✅ 加载微调模型: {self.model_path}")
+            self.model = BERTSentimentClassifier()
+            self.model.load_state_dict(torch.load(self.model_path, map_location=self.device))
+            self.model.to(self.device)
+            self.model.eval()
+            print("✅ 模型加载成功（已微调）")
         else:
-            print("使用规则匹配模式（备选方案）")
+            print(f"⚠️ 未找到微调模型，将使用预训练模型")
+            print("💡 首次运行会自动进行微调训练...")
+            self.model = BERTSentimentClassifier()
+            self.model.to(self.device)
+            self.model.eval()
 
-    def _prepare_data(self):
+    def prepare_training_data(self):
         """准备训练数据"""
-        print("正在准备训练数据...")
-
         texts = []
         labels = []
 
-        # 加载正面评论
-        for review in DOUBAN_REAL_REVIEWS["positive"]:
-            texts.append(review)
-            labels.append(0)  # positive
+        # 正面评论 (label=2)
+        for text in DOUBAN_REAL_REVIEWS['positive']:
+            texts.append(text)
+            labels.append(2)
 
-        # 加载中性评论
-        for review in DOUBAN_REAL_REVIEWS["neutral"]:
-            texts.append(review)
-            labels.append(1)  # neutral
+        # 中性评论 (label=1)
+        for text in DOUBAN_REAL_REVIEWS['neutral']:
+            texts.append(text)
+            labels.append(1)
 
-        # 加载负面评论
-        for review in DOUBAN_REAL_REVIEWS["negative"]:
-            texts.append(review)
-            labels.append(2)  # negative
+        # 负面评论 (label=0)
+        for text in DOUBAN_REAL_REVIEWS['negative']:
+            texts.append(text)
+            labels.append(0)
 
-        # 数据增强：添加轻微变化的评论
-        augmented_texts = []
-        augmented_labels = []
+        print(f"📊 原始数据: 正面{len(DOUBAN_REAL_REVIEWS['positive'])}条, "
+              f"中性{len(DOUBAN_REAL_REVIEWS['neutral'])}条, "
+              f"负面{len(DOUBAN_REAL_REVIEWS['negative'])}条")
 
-        for text, label in zip(texts, labels):
-            # 同义词替换增强
-            if label == 0:  # positive
-                new_text = text.replace('好', '棒').replace('经典', '杰作')
-                augmented_texts.append(new_text)
-                augmented_labels.append(label)
-                new_text2 = text.replace('震撼', '感动').replace('推荐', '值得看')
-                augmented_texts.append(new_text2)
-                augmented_labels.append(label)
-            elif label == 2:  # negative
-                new_text = text.replace('差', '烂').replace('失望', '后悔')
-                augmented_texts.append(new_text)
-                augmented_labels.append(label)
-                new_text2 = text.replace('无聊', '乏味').replace('浪费时间', '浪费生命')
-                augmented_texts.append(new_text2)
-                augmented_labels.append(label)
-
+        # 数据增强
+        augmented_texts, augmented_labels = self._augment_data(texts, labels)
         texts.extend(augmented_texts)
         labels.extend(augmented_labels)
 
-        print(f"总训练数据量: {len(texts)} 条")
-        print(f"正面: {labels.count(0)}, 中性: {labels.count(1)}, 负面: {labels.count(2)}")
+        print(f"📊 增强后: 共{len(texts)}条数据")
 
-        # 划分训练集和验证集
-        train_texts, val_texts, train_labels, val_labels = train_test_split(
-            texts, labels, test_size=0.15, random_state=42, stratify=labels
-        )
+        return train_test_split(texts, labels, test_size=0.2, random_state=42, stratify=labels)
 
-        return train_texts, val_texts, train_labels, val_labels
+    def _augment_data(self, texts, labels):
+        """数据增强"""
+        augmented = []
+        aug_labels = []
 
-    def _train_model(self, epochs=5, batch_size=8, learning_rate=2e-5):
-        """训练BERT模型（减少epochs和batch_size以适应CPU）"""
+        # 同义词替换
+        synonym_map = {
+            '好': ['棒', '赞', '优秀', '出色'],
+            '棒': ['好', '赞', '优秀', '出色'],
+            '赞': ['好', '棒', '优秀', '出色'],
+            '差': ['烂', '糟糕', '劣质', '差劲'],
+            '烂': ['差', '糟糕', '劣质', '差劲'],
+            '喜欢': ['喜爱', '钟爱', '欣赏', '热爱'],
+            '讨厌': ['厌恶', '反感', '嫌弃'],
+            '失望': ['失落', '遗憾', '沮丧', '灰心'],
+            '精彩': ['出色', '绝妙', '精湛', '精妙'],
+            '无聊': ['乏味', '枯燥', '无趣', '沉闷'],
+            '感动': ['动容', '感慨', '触动'],
+            '震撼': ['震惊', '惊愕', '冲击']
+        }
+
+        for text, label in zip(texts, labels):
+            for original, synonyms in synonym_map.items():
+                if original in text:
+                    for syn in synonyms[:2]:  # 每个词生成2个变体
+                        new_text = text.replace(original, syn, 1)
+                        if new_text != text and new_text not in augmented:
+                            augmented.append(new_text)
+                            aug_labels.append(label)
+
+        return augmented, aug_labels
+
+    def train(self, epochs=10, batch_size=8, learning_rate=2e-5):
+        """微调训练模型"""
+        print("\n" + "="*60)
+        print("🎯 开始微调BERT情感分类器")
+        print("="*60)
+
         # 准备数据
-        train_texts, val_texts, train_labels, val_labels = self._prepare_data()
+        train_texts, val_texts, train_labels, val_labels = self.prepare_training_data()
+
+        print(f"\n📊 训练集: {len(train_texts)} 条")
+        print(f"📊 验证集: {len(val_texts)} 条")
+
+        # 统计类别分布
+        train_dist = Counter(train_labels)
+        val_dist = Counter(val_labels)
+        print(f"📊 训练集分布: 正面{train_dist[2]}, 中性{train_dist[1]}, 负面{train_dist[0]}")
+        print(f"📊 验证集分布: 正面{val_dist[2]}, 中性{val_dist[1]}, 负面{val_dist[0]}")
 
         # 创建数据集
         train_dataset = SentimentDataset(train_texts, train_labels, self.tokenizer)
         val_dataset = SentimentDataset(val_texts, val_labels, self.tokenizer)
 
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-        # 初始化模型
-        self.model = BERTSentimentClassifier(self.model_name).to(self.device)
-
-        # 优化器 - 使用torch.optim.AdamW替代
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate)
-
-        # 学习率调度器
-        total_steps = len(train_loader) * epochs
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=int(0.1 * total_steps),
-            num_training_steps=total_steps
-        )
-
-        # 损失函数
+        # 优化器和损失函数 - 使用 PyTorch 的 AdamW
+        optimizer = AdamW(self.model.parameters(), lr=learning_rate)
         criterion = nn.CrossEntropyLoss()
 
-        print(f"\n🚀 开始训练BERT模型...")
-        print(f"   训练样本: {len(train_dataset)}, 验证样本: {len(val_dataset)}")
-        print(f"   Epochs: {epochs}, Batch Size: {batch_size}")
-        print(f"   学习率: {learning_rate}")
-        print("-" * 50)
+        # 训练循环
+        best_val_acc = 0
+        best_val_loss = float('inf')
 
-        best_val_accuracy = 0
+        print(f"\n🚀 开始训练 (共{epochs}轮)...\n")
 
         for epoch in range(epochs):
             # 训练阶段
             self.model.train()
             total_loss = 0
 
-            for batch in train_loader:
+            for batch_idx, batch in enumerate(train_loader):
                 input_ids = batch['input_ids'].to(self.device)
                 attention_mask = batch['attention_mask'].to(self.device)
-                labels = batch['labels'].to(self.device)
+                labels = batch['label'].to(self.device)
 
                 optimizer.zero_grad()
                 logits = self.model(input_ids, attention_mask)
                 loss = criterion(logits, labels)
                 loss.backward()
 
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                optimizer.step()
-                scheduler.step()
+                # 梯度裁剪
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
 
+                optimizer.step()
                 total_loss += loss.item()
 
-            avg_train_loss = total_loss / len(train_loader)
+            avg_loss = total_loss / len(train_loader)
 
             # 验证阶段
-            val_accuracy, _ = self._evaluate(val_loader)
+            val_loss, val_acc = self._evaluate(val_loader, criterion)
 
-            print(f"Epoch {epoch+1}/{epochs} - 训练损失: {avg_train_loss:.4f} - 验证准确率: {val_accuracy:.4f}")
+            print(f"Epoch {epoch+1:2d}/{epochs} | "
+                  f"Train Loss: {avg_loss:.4f} | "
+                  f"Val Loss: {val_loss:.4f} | "
+                  f"Val Acc: {val_acc:.4f}")
 
             # 保存最佳模型
-            if val_accuracy > best_val_accuracy:
-                best_val_accuracy = val_accuracy
-                self._save_model('best_bert_sentiment.pth')
-                print(f"  ✅ 保存最佳模型 (准确率: {val_accuracy:.4f})")
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                best_val_loss = val_loss
+                torch.save(self.model.state_dict(), self.model_path)
+                print(f"  ✅ 保存最佳模型 (准确率: {val_acc:.4f})")
 
-        # 加载最佳模型
-        self._load_model('best_bert_sentiment.pth')
-        self.is_trained = True
+        print(f"\n" + "="*60)
+        print(f"✅ 微调完成！")
+        print(f"📊 最佳验证准确率: {best_val_acc:.4f}")
+        print(f"📊 最佳验证损失: {best_val_loss:.4f}")
+        print(f"💾 模型保存至: {self.model_path}")
+        print("="*60)
 
-        print(f"\n{'='*50}")
-        print(f"✅ BERT模型训练完成！")
-        print(f"📊 最佳验证准确率: {best_val_accuracy:.4f}")
-        print(f"{'='*50}")
+        # 重新加载最佳模型
+        self.model.load_state_dict(torch.load(self.model_path, map_location=self.device))
+        self.model.eval()
 
-        # 打印最终分类报告
-        _, final_report = self._evaluate(val_loader, print_report=True)
+        return best_val_acc
 
-    def _evaluate(self, data_loader, print_report=False):
+    def _evaluate(self, val_loader, criterion):
         """评估模型"""
         self.model.eval()
-        all_preds = []
-        all_labels = []
+        total_loss = 0
+        correct = 0
+        total = 0
 
         with torch.no_grad():
-            for batch in data_loader:
+            for batch in val_loader:
                 input_ids = batch['input_ids'].to(self.device)
                 attention_mask = batch['attention_mask'].to(self.device)
-                labels = batch['labels'].to(self.device)
+                labels = batch['label'].to(self.device)
 
                 logits = self.model(input_ids, attention_mask)
-                preds = torch.argmax(logits, dim=1)
+                loss = criterion(logits, labels)
 
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
+                total_loss += loss.item()
+                predictions = torch.argmax(logits, dim=1)
 
-        accuracy = accuracy_score(all_labels, all_preds)
+                correct += (predictions == labels).sum().item()
+                total += labels.size(0)
 
-        if print_report:
-            print("\n📊 分类报告:")
-            print(classification_report(all_labels, all_preds,
-                                        target_names=['正面', '中性', '负面']))
+        avg_loss = total_loss / len(val_loader)
+        accuracy = correct / total if total > 0 else 0
 
-        return accuracy, classification_report(all_labels, all_preds)
+        return avg_loss, accuracy
 
+    @torch.no_grad()
     def predict_sentiment(self, text):
         """
         预测单条评论的情感
@@ -384,36 +424,34 @@ class BERTSentimentAnalyzer:
         Returns:
             (sentiment, confidence): 情感标签和置信度
         """
-        if not self.use_pretrained or not self.is_trained or self.model is None:
-            return self._rule_based_fallback(text), 0.5
+        if not text or not text.strip():
+            return 'neutral', 0.5
 
-        try:
-            self.model.eval()
+        text = text.strip()
 
-            # Tokenize
-            encoding = self.tokenizer(
-                text,
-                truncation=True,
-                padding='max_length',
-                max_length=128,
-                return_tensors='pt'
-            )
+        # Tokenize
+        encoding = self.tokenizer(
+            text,
+            truncation=True,
+            padding='max_length',
+            max_length=128,
+            return_tensors='pt'
+        )
 
-            input_ids = encoding['input_ids'].to(self.device)
-            attention_mask = encoding['attention_mask'].to(self.device)
+        input_ids = encoding['input_ids'].to(self.device)
+        attention_mask = encoding['attention_mask'].to(self.device)
 
-            with torch.no_grad():
-                logits = self.model(input_ids, attention_mask)
-                probabilities = torch.softmax(logits, dim=1)
-                pred_class = torch.argmax(logits, dim=1).item()
-                confidence = probabilities[0][pred_class].item()
+        # 预测
+        self.model.eval()
+        logits = self.model(input_ids, attention_mask)
+        probabilities = F.softmax(logits, dim=1)
 
-            sentiment = self.label_map[pred_class]
-            return sentiment, confidence
+        pred_class = torch.argmax(logits, dim=1).item()
+        confidence = torch.max(probabilities).item()
 
-        except Exception as e:
-            print(f"BERT预测失败: {e}, 使用规则备选")
-            return self._rule_based_fallback(text), 0.5
+        sentiment = self.label_map[pred_class]
+
+        return sentiment, confidence
 
     def predict_batch(self, texts, batch_size=32):
         """
@@ -426,148 +464,189 @@ class BERTSentimentAnalyzer:
         Returns:
             results: 包含sentiment和confidence的字典列表
         """
-        if not self.use_pretrained or not self.is_trained or self.model is None:
-            results = []
-            for text in texts:
-                sentiment = self._rule_based_fallback(text)
-                results.append({'sentiment': sentiment, 'confidence': 0.6})
-            return results
+        if not texts:
+            return []
 
-        try:
-            self.model.eval()
-            results = []
+        results = []
 
-            for i in range(0, len(texts), batch_size):
-                batch_texts = texts[i:i+batch_size]
+        for text in texts:
+            if not text or not text.strip():
+                results.append({'sentiment': 'neutral', 'confidence': 0.5})
+            else:
+                sentiment, confidence = self.predict_sentiment(text)
+                results.append({'sentiment': sentiment, 'confidence': round(confidence, 4)})
 
-                # Tokenize批量文本
-                encodings = self.tokenizer(
-                    batch_texts,
-                    truncation=True,
-                    padding='max_length',
-                    max_length=128,
-                    return_tensors='pt'
-                )
+        return results
 
-                input_ids = encodings['input_ids'].to(self.device)
-                attention_mask = encodings['attention_mask'].to(self.device)
-
-                with torch.no_grad():
-                    logits = self.model(input_ids, attention_mask)
-                    probabilities = torch.softmax(logits, dim=1)
-                    pred_classes = torch.argmax(logits, dim=1)
-                    confidences = probabilities[range(len(batch_texts)), pred_classes]
-
-                for j, text in enumerate(batch_texts):
-                    sentiment = self.label_map[pred_classes[j].item()]
-                    confidence = confidences[j].item()
-                    results.append({'sentiment': sentiment, 'confidence': confidence})
-
-            return results
-
-        except Exception as e:
-            print(f"BERT批量预测失败: {e}")
-            results = []
-            for text in texts:
-                sentiment = self._rule_based_fallback(text)
-                results.append({'sentiment': sentiment, 'confidence': 0.5})
-            return results
-
-    def _rule_based_fallback(self, text):
+    def analyze_with_details(self, text):
         """
-        基于规则的备用情感分析（当BERT不可用时使用）
-
-        Args:
-            text: 评论文本
+        详细分析，返回更多信息
 
         Returns:
-            sentiment: 情感标签
+            dict: 包含详细分析结果
         """
-        positive_words = ['好', '棒', '赞', '喜欢', '爱', '精彩', '经典', '震撼', '感动', '推荐',
-                          '值得', '好看', '优秀', '神作', '完美', '杰出', '出色', '惊喜', '炸裂',
-                          '太棒', '超棒', '绝了', '牛', '厉害', '给力', '过瘾', '爽']
-        negative_words = ['差', '烂', '失望', '垃圾', '无聊', '糟糕', '失败', '尴尬', '浪费时间',
-                          '后悔', '烂片', '狗血', '无语', '崩溃', '差劲', '垃圾片', '骗钱', '敷衍',
-                          '尴尬', '莫名其妙', '不知所云', '逻辑混乱']
+        sentiment, confidence = self.predict_sentiment(text)
 
-        text_lower = text.lower()
-        pos_count = sum(1 for w in positive_words if w in text_lower)
-        neg_count = sum(1 for w in negative_words if w in text_lower)
+        # 获取各类别概率
+        encoding = self.tokenizer(
+            text,
+            truncation=True,
+            padding='max_length',
+            max_length=128,
+            return_tensors='pt'
+        )
 
-        if pos_count > neg_count:
-            return "positive"
-        elif neg_count > pos_count:
-            return "negative"
-        else:
-            return "neutral"
+        input_ids = encoding['input_ids'].to(self.device)
+        attention_mask = encoding['attention_mask'].to(self.device)
 
-    def _save_model(self, path):
-        """保存模型"""
-        torch.save({
-            'model_state_dict': self.model.state_dict(),
-            'model_name': self.model_name,
-            'label_map': self.label_map
-        }, path)
-        print(f"💾 模型已保存: {path}")
+        self.model.eval()
+        with torch.no_grad():
+            logits = self.model(input_ids, attention_mask)
+            probabilities = F.softmax(logits, dim=1).squeeze().cpu().numpy()
 
-    def _load_model(self, path):
-        """加载模型"""
-        if not os.path.exists(path):
-            return False
-
-        try:
-            checkpoint = torch.load(path, map_location=self.device)
-            self.model = BERTSentimentClassifier(self.model_name).to(self.device)
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            self.model_name = checkpoint.get('model_name', self.model_name)
-            self.label_map = checkpoint.get('label_map', self.label_map)
-            print(f"✅ 模型已加载: {path}")
-            return True
-        except Exception as e:
-            print(f"加载模型失败: {e}")
-            return False
+        return {
+            'sentiment': sentiment,
+            'confidence': confidence,
+            'probabilities': {
+                'positive': float(probabilities[2]),
+                'neutral': float(probabilities[1]),
+                'negative': float(probabilities[0])
+            },
+            'text_length': len(text),
+            'model_type': 'fine_tuned_bert'
+        }
 
     def get_model_info(self):
         """获取模型信息"""
         return {
-            'model_name': self.model_name,
+            'model_name': 'bert-base-chinese',
+            'model_type': 'fine_tuned_classifier',
             'device': str(self.device),
-            'is_trained': self.is_trained,
-            'use_pretrained': self.use_pretrained,
+            'is_fine_tuned': os.path.exists(self.model_path),
+            'model_path': self.model_path,
             'num_classes': 3,
-            'classes': ['positive', 'neutral', 'negative']
+            'classes': ['positive', 'neutral', 'negative'],
+            'classifier_layers': '3-layer MLP (768→256→128→3)',
+            'description': '微调版BERT情感分析器，使用3层分类头'
         }
 
 
-# 测试代码
-if __name__ == '__main__':
-    print("测试BERT情感分析器...")
+# ==================== 规则匹配备选方案（兼容旧版） ====================
+class RuleBasedSentimentAnalyzer:
+    """规则匹配情感分析器（作为备选）"""
 
-    # 初始化分析器
-    analyzer = BERTSentimentAnalyzer(model_name='bert-base-chinese', use_pretrained=True)
+    POSITIVE_KEYWORDS = [
+        '好', '棒', '赞', '喜欢', '爱', '精彩', '经典', '震撼', '感动', '推荐',
+        '值得', '好看', '优秀', '神作', '完美', '杰出', '出色', '惊喜', '炸裂',
+        '太棒', '超棒', '绝了', '牛', '厉害', '给力', '过瘾', '爽', '牛逼'
+    ]
+
+    NEGATIVE_KEYWORDS = [
+        '差', '烂', '失望', '垃圾', '无聊', '糟糕', '失败', '尴尬', '浪费时间',
+        '后悔', '烂片', '狗血', '无语', '崩溃', '差劲', '垃圾片', '骗钱', '敷衍'
+    ]
+
+    def predict_sentiment(self, text):
+        text_lower = text.lower()
+
+        pos_count = sum(1 for w in self.POSITIVE_KEYWORDS if w in text_lower)
+        neg_count = sum(1 for w in self.NEGATIVE_KEYWORDS if w in text_lower)
+
+        if pos_count > neg_count:
+            return 'positive', min(0.8, 0.5 + pos_count * 0.1)
+        elif neg_count > pos_count:
+            return 'negative', min(0.8, 0.5 + neg_count * 0.1)
+        else:
+            return 'neutral', 0.6
+
+    def predict_batch(self, texts):
+        return [{'sentiment': self.predict_sentiment(t)[0], 'confidence': self.predict_sentiment(t)[1]}
+                for t in texts]
+
+    def get_model_info(self):
+        return {'model_type': 'rule_based', 'description': '基于关键词匹配的情感分析'}
+
+
+# ==================== 全局单例 ====================
+_global_analyzer = None
+_fallback_analyzer = None
+
+
+def get_sentiment_analyzer():
+    """
+    获取全局情感分析器单例（微调版优先，失败则使用规则匹配）
+    """
+    global _global_analyzer, _fallback_analyzer
+
+    if _global_analyzer is None:
+        try:
+            print("\n" + "="*60)
+            print("初始化情感分析器...")
+            print("="*60)
+
+            analyzer = FineTunedBERTSentimentAnalyzer()
+
+            # 检查是否需要训练
+            if not os.path.exists('bert_finetuned_sentiment.pth'):
+                print("\n📚 首次运行，开始自动微调训练...")
+                print("⏳ 请稍等，大约需要2-3分钟...\n")
+                analyzer.train(epochs=8, batch_size=8, learning_rate=2e-5)
+            else:
+                print("✅ 使用已保存的微调模型")
+
+            _global_analyzer = analyzer
+            print("\n✅ 微调版BERT情感分析器已就绪\n")
+
+        except Exception as e:
+            print(f"\n⚠️ 微调版初始化失败: {e}")
+
+            # 创建规则匹配备选
+            if _fallback_analyzer is None:
+                _fallback_analyzer = RuleBasedSentimentAnalyzer()
+
+            _global_analyzer = _fallback_analyzer
+            print("✅ 使用规则匹配分析器\n")
+
+    return _global_analyzer
+
+
+# ==================== 测试代码 ====================
+if __name__ == '__main__':
+    print("测试微调版BERT情感分析器...")
+
+    analyzer = get_sentiment_analyzer()
+
+    # 显示模型信息
+    print("\n模型信息:")
+    print(json.dumps(analyzer.get_model_info(), ensure_ascii=False, indent=2))
 
     # 测试用例
     test_texts = [
         "这部电影太好看了，强烈推荐！",
         "一般般吧，没什么特别的感觉。",
         "太烂了，浪费时间！",
+        "神作！绝对是我看过最好的电影！",
         "剧情精彩，演技在线，值得一看。",
         "中规中矩，没有惊喜也没有失望。",
-        "什么垃圾电影，完全看不下去！"
+        "什么垃圾电影，完全看不下去！",
+        "看完只想说：浪费时间！",
+        "太震撼了！特效无敌！",
+        "还行吧，可以看但不会二刷。"
     ]
 
-    print("\n" + "="*50)
+    print("\n" + "="*60)
     print("测试预测结果:")
-    print("="*50)
+    print("="*60)
 
     for text in test_texts:
         sentiment, confidence = analyzer.predict_sentiment(text)
-        print(f"文本: {text}")
+        print(f"\n文本: {text}")
         print(f"情感: {sentiment}, 置信度: {confidence:.4f}")
-        print("-" * 30)
 
-    # 批量测试
-    print("\n批量测试:")
-    results = analyzer.predict_batch(test_texts)
-    for i, result in enumerate(results):
-        print(f"{i+1}. {result['sentiment']} (置信度: {result['confidence']:.4f})")
+        # 如果是微调版，显示详细概率
+        if hasattr(analyzer, 'analyze_with_details'):
+            details = analyzer.analyze_with_details(text)
+            print(f"概率: 正面={details['probabilities']['positive']:.3f}, "
+                  f"中性={details['probabilities']['neutral']:.3f}, "
+                  f"负面={details['probabilities']['negative']:.3f}")
+        print("-" * 40)
