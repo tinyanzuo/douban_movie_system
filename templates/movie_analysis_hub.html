@@ -3,71 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>影视分析 - 豆瓣影视分析系统</title>
+    <title>影视分析 - 影视分析系统</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: #f5f5f5; }
+        body { font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif; background: linear-gradient(145deg, #f0f9ff 0%, #e6f7f0 100%); min-height: 100vh; }
 
-        .navbar { background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
-        .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
-        .logo { font-size: 1.5rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .navbar { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(100, 116, 139, 0.1); }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .logo { font-size: 1.5rem; font-weight: 600; background: linear-gradient(135deg, #3b82f6, #10b981); -webkit-background-clip: text; background-clip: text; color: transparent; text-decoration: none; letter-spacing: -0.3px; }
         .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
-        .nav-links a { text-decoration: none; color: #333; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
-        .nav-links a:hover, .nav-links a.active { background: #667eea; color: white; }
+        .nav-links a { text-decoration: none; color: #334155; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; font-weight: 500; }
+        .nav-links a:hover, .nav-links a.active { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.2); }
 
         .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
 
         .tabs { display: flex; gap: 5px; margin-bottom: 20px; background: white; border-radius: 15px; padding: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .tab-btn { padding: 12px 25px; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s; border-radius: 12px; color: #666; }
-        .tab-btn.active { background: #667eea; color: white; }
+        .tab-btn { padding: 12px 25px; background: none; border: none; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.3s; border-radius: 12px; color: #475569; }
+        .tab-btn.active { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.2); }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card h2 { margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 15px; font-size: 1.2rem; }
-        .card h3 { font-size: 1rem; color: #666; margin: 15px 0 10px 0; }
+        .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02); border: 1px solid #eef2ff; }
+        .card h2 { margin-bottom: 15px; color: #0f172a; border-left: 4px solid #3b82f6; padding-left: 15px; font-size: 1.2rem; }
+        .card h3 { font-size: 1rem; color: #475569; margin: 15px 0 10px 0; }
 
         .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-        .form-group input::placeholder { color: #aaa; font-size: 12px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #334155; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; transition: all 0.3s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .form-group input::placeholder { color: #94a3b8; font-size: 12px; }
 
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; margin: 5px; }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
-        .btn-success { background: #48bb78; color: white; }
-        .btn-success:hover { background: #38a169; transform: translateY(-2px); }
-        .btn-warning { background: #ed8936; color: white; }
-        .btn-info { background: #4299e1; color: white; }
-        .btn-danger { background: #f56565; color: white; }
-        .btn-analysis { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .btn-analysis:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        .btn { padding: 10px 20px; border: none; border-radius: 40px; cursor: pointer; font-size: 14px; transition: all 0.3s; margin: 5px; font-weight: 500; }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; box-shadow: 0 2px 8px rgba(59,130,246,0.2); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59,130,246,0.3); }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; transform: translateY(-2px); }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-info { background: #3b82f6; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-download { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
+        .btn-download:hover { transform: translateY(-2px); }
+        .btn-analysis { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; }
+        .btn-analysis:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; margin: 0; }
 
-        .result-area { background: #f7fafc; border-radius: 10px; padding: 15px; max-height: 500px; overflow-y: auto; font-size: 13px; line-height: 1.6; }
+        .result-area { background: #f8fafc; border-radius: 16px; padding: 15px; max-height: 500px; overflow-y: auto; font-size: 13px; line-height: 1.6; border: 1px solid #eef2ff; }
         .result-area pre { white-space: pre-wrap; font-family: inherit; }
 
-        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; padding: 20px; text-align: center; }
+        .stat-card { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; border-radius: 20px; padding: 20px; text-align: center; }
         .stat-card .number { font-size: 2rem; font-weight: bold; }
         .stat-card .label { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; }
 
-        .stat-positive { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
-        .stat-neutral { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
-        .stat-negative { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); }
+        .stat-positive { background: linear-gradient(135deg, #10b981, #059669); }
+        .stat-neutral { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .stat-negative { background: linear-gradient(135deg, #ef4444, #dc2626); }
 
         .progress-bar { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 10px 0; }
-        .progress-fill { height: 100%; background: #48bb78; transition: width 0.3s; width: 0%; }
+        .progress-fill { height: 100%; background: linear-gradient(135deg, #3b82f6, #10b981); transition: width 0.3s; width: 0%; }
 
-        .status { padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 12px; }
-        .status-info { background: #bee3f8; color: #2c5282; }
-        .status-success { background: #c6f6d5; color: #22543d; }
-        .status-error { background: #fed7d7; color: #9b2c2c; }
-        .status-warning { background: #feebc8; color: #975a16; }
+        .status { padding: 10px; border-radius: 12px; margin-top: 10px; font-size: 12px; }
+        .status-info { background: #dbeafe; color: #1e40af; }
+        .status-success { background: #d1fae5; color: #065f46; }
+        .status-error { background: #fee2e2; color: #991b1b; }
+        .status-warning { background: #fed7aa; color: #92400e; }
 
-        .chart-container { text-align: center; margin: 15px 0; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .chart-container { text-align: center; margin: 15px 0; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eef2ff; }
         .chart-container img { max-width: 100%; border-radius: 8px; max-height: 400px; object-fit: contain; }
 
         .analysis-modules {
@@ -80,26 +84,28 @@
         }
         .module-btn {
             padding: 12px 24px;
-            background: #f7fafc;
+            background: #f8fafc;
             border: none;
             border-radius: 40px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
             transition: all 0.3s;
-            color: #4a5568;
+            color: #475569;
             display: flex;
             align-items: center;
             gap: 8px;
+            border: 1px solid #eef2ff;
         }
         .module-btn:hover {
-            background: #edf2f7;
+            background: #eef2ff;
             transform: translateY(-2px);
         }
         .module-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6, #10b981);
             color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+            border-color: transparent;
         }
         .module-content {
             display: none;
@@ -113,56 +119,177 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .review-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
+        .crawl-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-        .review-table th {
-            background: #f0f0f0;
-            padding: 12px 8px;
-            text-align: left;
-            font-weight: 600;
-            color: #333;
+        .crawl-stat-card {
+            background: linear-gradient(135deg, #3b82f6, #10b981);
+            color: white;
+            border-radius: 20px;
+            padding: 15px 25px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
         }
-        .review-table td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: top;
+        .crawl-stat-card .stat-number {
+            font-size: 28px;
+            font-weight: bold;
         }
-        .stars-rating {
-            color: #fbbf24;
+        .crawl-stat-card .stat-label {
             font-size: 12px;
-            letter-spacing: 1px;
-            white-space: nowrap;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        .crawl-stat-card.positive { background: linear-gradient(135deg, #10b981, #059669); }
+        .crawl-stat-card.neutral { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .crawl-stat-card.negative { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .crawl-review-card {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border-left: 4px solid #3b82f6;
+            border: 1px solid #eef2ff;
+        }
+        .crawl-review-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .crawl-review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .crawl-review-user {
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .crawl-review-user .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #10b981);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        .crawl-review-rating {
+            color: #fbbf24;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        .crawl-review-sentiment {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .crawl-sentiment-positive {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .crawl-sentiment-neutral {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        .crawl-sentiment-negative {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .crawl-review-content {
+            color: #334155;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 12px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+        .crawl-review-time {
+            font-size: 11px;
+            color: #94a3b8;
+            text-align: right;
+        }
+        .crawl-confidence-badge {
+            font-size: 11px;
+            color: #64748b;
+            margin-left: 8px;
+        }
+
+        .keywords-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 10px;
+            min-height: 150px;
+            justify-content: center;
+        }
+        .keyword-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #10b981);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .keyword-tag:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 15px rgba(59,130,246,0.4);
+        }
+        .keyword-tag .count {
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 2px 8px;
+            margin-left: 8px;
+            font-size: 11px;
         }
 
         .review-item { border-bottom: 1px solid #e2e8f0; padding: 12px; }
-        .review-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem; color: #666; flex-wrap: wrap; gap: 8px; }
-        .review-user { font-weight: 500; color: #667eea; }
+        .review-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem; color: #64748b; flex-wrap: wrap; gap: 8px; }
+        .review-user { font-weight: 500; color: #3b82f6; }
         .review-rating { color: #fbbf24; }
         .review-sentiment { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 10px; }
-        .sentiment-positive { background: #c6f6d5; color: #22543d; }
-        .sentiment-neutral { background: #feebc8; color: #975a16; }
-        .sentiment-negative { background: #fed7d7; color: #9b2c2c; }
-        .review-content { font-size: 0.9rem; line-height: 1.5; margin-top: 5px; }
+        .sentiment-positive { background: #d1fae5; color: #065f46; }
+        .sentiment-neutral { background: #fed7aa; color: #92400e; }
+        .sentiment-negative { background: #fee2e2; color: #991b1b; }
+        .review-content { font-size: 0.9rem; line-height: 1.5; margin-top: 5px; color: #334155; }
 
-        .movie-detail-card { background: #f7fafc; border-radius: 12px; padding: 15px; margin-bottom: 10px; }
+        .movie-detail-card { background: #f8fafc; border-radius: 16px; padding: 15px; margin-bottom: 10px; border: 1px solid #eef2ff; }
         .movie-detail-row { display: flex; margin-bottom: 10px; }
-        .movie-detail-label { width: 80px; font-weight: 600; color: #4a5568; }
-        .movie-detail-value { flex: 1; color: #2d3748; }
+        .movie-detail-label { width: 80px; font-weight: 600; color: #475569; }
+        .movie-detail-value { flex: 1; color: #1e293b; }
 
         .stars { color: #fbbf24; font-size: 1.2rem; }
-        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .suggestions { margin-top: 10px; }
-        .suggestion-btn { background: #edf2f7; border: none; padding: 5px 12px; margin: 3px; border-radius: 20px; cursor: pointer; font-size: 12px; }
-        .suggestion-btn:hover { background: #667eea; color: white; }
+        .suggestion-btn { background: #f1f5f9; border: none; padding: 5px 12px; margin: 3px; border-radius: 20px; cursor: pointer; font-size: 12px; color: #334155; }
+        .suggestion-btn:hover { background: linear-gradient(135deg, #3b82f6, #10b981); color: white; }
 
         .upload-area {
             border: 2px dashed #cbd5e0;
-            border-radius: 12px;
+            border-radius: 20px;
             padding: 20px;
             text-align: center;
             background: #fafbfc;
@@ -170,34 +297,80 @@
             cursor: pointer;
         }
         .upload-area:hover {
-            border-color: #667eea;
-            background: #f7fafc;
+            border-color: #3b82f6;
+            background: #eff6ff;
         }
         .upload-icon {
             font-size: 48px;
-            color: #a0aec0;
+            color: #94a3b8;
             margin-bottom: 10px;
         }
         .file-info {
             margin-top: 10px;
             font-size: 12px;
-            color: #718096;
+            color: #64748b;
             word-break: break-all;
         }
 
         .confidence-badge {
             font-size: 10px;
-            color: #666;
+            color: #64748b;
             margin-left: 8px;
         }
 
         .ml-info {
             margin-top: 15px;
             padding: 12px;
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border-radius: 8px;
+            background: #fef3c7;
+            border-radius: 12px;
             border-left: 4px solid #f59e0b;
             font-size: 12px;
+        }
+
+        .toast-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            z-index: 10001;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: fadeInOut 2.5s ease-in-out forwards;
+        }
+        .toast-error {
+            background: #ef4444;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .pie-chart-container {
+            text-align: center;
+            margin: 10px 0;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            min-height: 400px;
+            border: 1px solid #eef2ff;
+        }
+        #sentiment-pie-echarts {
+            width: 100%;
+            height: 350px;
         }
 
         @media (max-width: 768px) {
@@ -206,8 +379,14 @@
             .tab-btn { padding: 8px 15px; font-size: 14px; }
             .module-btn { padding: 8px 16px; font-size: 12px; }
             .review-header { flex-direction: column; align-items: flex-start; }
+            .crawl-review-header { flex-direction: column; align-items: flex-start; }
+            .btn-group { flex-direction: column; align-items: stretch; }
+            .btn-group .btn { margin: 5px 0; }
+            #sentiment-pie-echarts { height: 280px; }
         }
     </style>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
 <body>
 <nav class="navbar">
@@ -216,15 +395,15 @@
         <div class="nav-links">
             <a href="/">首页</a>
             <a href="/movie_analysis_hub" class="active">影视分析</a>
-            <a href="/recommendation">推荐引擎</a>
             <a href="/social_hub">社交管理</a>
+            <a href="/recommendation">推荐引擎</a>
         </div>
     </div>
 </nav>
 
 <div class="container">
     <div class="tabs">
-        <button class="tab-btn active" data-tab="data-collection">📊 数据采集</button>
+        <button class="tab-btn active" data-tab="data-collection">📊 获取评论</button>
         <button class="tab-btn" data-tab="data-analysis">📈 数据分析</button>
         <button class="tab-btn" data-tab="movie-analysis">🎬 影视分析</button>
     </div>
@@ -233,47 +412,50 @@
     <div id="data-collection" class="tab-content active">
         <div class="grid-2">
             <div class="card">
-                <h2>🕷️ 豆瓣影视评论爬虫</h2>
-                <p style="color: #666; margin-bottom: 15px;">真实爬取豆瓣影视的最新评论数据，支持朴素贝叶斯情感分析</p>
+                <h2>📝 获取电影评论</h2>
+                <p style="color: #64748b; margin-bottom: 15px;">获取豆瓣影视的最新评论，自动分析情感倾向</p>
                 <div class="form-group">
-                    <label>影视名称:</label>
+                    <label>电影名称:</label>
                     <input type="text" id="crawl-movie" placeholder="例如: 肖申克的救赎">
                 </div>
                 <div class="form-group">
-                    <label>爬取数量:</label>
-                    <input type="number" id="crawl-count" placeholder="例如: 200" min="10" max="1000" step="10">
-                    <small style="color:#666;">可输入10-1000条，爬取时间与数量成正比</small>
+                    <label>获取条数:</label>
+                    <input type="number" id="crawl-count" placeholder="例如: 200" min="10" max="1000" step="10" value="200">
+                    <small style="color:#64748b;">可输入10-1000条</small>
                 </div>
-                <button class="btn btn-primary" onclick="startCrawling()">🚀 开始爬取</button>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="startCrawling()">🚀 开始获取</button>
+                    <button class="btn btn-download" id="downloadCrawlDataBtn" onclick="downloadCrawledData()" disabled>💾 下载数据</button>
+                </div>
                 <div class="progress-bar" style="margin-top: 15px;">
                     <div id="crawl-progress-fill" class="progress-fill"></div>
                 </div>
-                <div id="crawl-status" class="status status-info">⚡ 等待开始爬取</div>
+                <div id="crawl-status" class="status status-info">⚡ 等待开始</div>
             </div>
 
             <div class="card">
                 <h2>📤 上传评论文件</h2>
-                <p style="font-size: 12px; color: #666;">支持 TXT / CSV / JSON 格式，每行一条评论</p>
+                <p style="font-size: 12px; color: #64748b;">支持 TXT / CSV / JSON 格式，每行一条评论</p>
                 <div id="upload-dropzone" class="upload-area" onclick="document.getElementById('upload-file-input').click()">
                     <div class="upload-icon">📁</div>
                     <div style="font-weight: 500; margin-bottom: 5px;">点击选择文件或拖拽至此</div>
-                    <div style="font-size: 12px; color: #718096;">支持 .txt, .csv, .json</div>
+                    <div style="font-size: 12px; color: #64748b;">支持 .txt, .csv, .json</div>
                     <div id="selected-file-name" class="file-info">未选择任何文件</div>
                 </div>
                 <input type="file" id="upload-file-input" accept=".txt,.csv,.json" style="display: none;" onchange="handleFileSelect(event)">
                 <div class="form-group" style="margin-top: 15px;">
                     <label>影视名称:</label>
-                    <input type="text" id="upload-movie-name" placeholder="输入电影名称（必填）">
+                    <input type="text" id="upload-movie-name" placeholder="输入影视名称（必填）">
                 </div>
                 <button class="btn btn-success" onclick="uploadFile()" style="width: 100%;">📤 上传并分析</button>
-                <div id="upload-status" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+                <div id="upload-status" style="margin-top: 10px; font-size: 12px; color: #64748b;"></div>
             </div>
         </div>
 
         <div class="card">
-            <h2>📋 爬取结果预览</h2>
-            <div id="crawl-result" class="result-area" style="max-height: 450px; overflow-x: auto;">
-                <div style="color:#999; text-align:center; padding:40px;">等待爬取...</div>
+            <h2>📋 获取结果预览</h2>
+            <div id="crawl-result" class="result-area" style="max-height: 550px; overflow-y: auto;">
+                <div style="color:#94a3b8; text-align:center; padding:40px;">等待获取...</div>
             </div>
         </div>
     </div>
@@ -281,96 +463,71 @@
     <!-- 数据分析标签页 -->
     <div id="data-analysis" class="tab-content">
         <div class="grid-2">
-            <div class="card">
-                <h2>📂 选择数据源</h2>
-                <div class="form-group">
-                    <label>数据源类型:</label>
-                    <select id="source-type" onchange="loadDataSources()">
-                        <option value="system">📚 系统内置评论</option>
-                        <option value="crawled">🕷️ 爬取的评论数据</option>
-                        <option value="uploaded">📤 上传的评论数据</option>
-                    </select>
+            <div>
+                <div class="card">
+                    <h2>📂 选择数据源</h2>
+                    <div class="form-group">
+                        <label>数据源类型:</label>
+                        <select id="source-type" onchange="onSourceTypeChange()">
+                            <option value="system">📚 内置示例</option>
+                            <option value="crawled">🕷️ 获取的评论</option>
+                            <option value="uploaded">📤 上传的评论</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>选择数据:</label>
+                        <select id="data-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="loadAnalysisData()" style="width: 100%;">📊 加载数据</button>
+                    </div>
+                    <div id="quick-actions" style="display: none; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                        <div style="font-size: 13px; font-weight: 600; color: #3b82f6; margin-bottom: 12px;">⚡ 快捷操作</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-sm" onclick="scrollToModule('sentiment-module')" style="background: #e0e7ff; color: #3b82f6;">🥧 情感分布</button>
+                            <button class="btn btn-sm" onclick="scrollToModule('rating-module')" style="background: #e0e7ff; color: #3b82f6;">📊 评分分布</button>
+                            <button class="btn btn-sm" onclick="scrollToModule('trend-module')" style="background: #e0e7ff; color: #3b82f6;">📈 情感趋势</button>
+                            <button class="btn btn-sm" onclick="scrollToModule('wordcloud-module')" style="background: #e0e7ff; color: #3b82f6;">☁️ 词云分析</button>
+                            <button class="btn btn-sm" onclick="scrollToReviews()" style="background: #e0e7ff; color: #3b82f6;">📝 评论列表</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>选择数据:</label>
-                    <select id="data-select"></select>
-                </div>
-                <div class="form-group">
-                    <button class="btn btn-primary" onclick="loadAnalysisData()" style="width: 100%;">📊 加载数据</button>
+                <div id="hot-keywords-card" style="display: none;">
+                    <div class="card">
+                        <h2>🔥 热门关键词</h2>
+                        <div id="hot-keywords" class="result-area" style="min-height: 150px; max-height: 300px; overflow-y: auto;">
+                            <div style="color:#94a3b8; text-align:center; padding:30px;">加载数据后自动生成</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="card">
-                <h2>📊 分析模块</h2>
-                <div class="analysis-modules">
-                    <button class="module-btn active" data-module="sentiment" onclick="switchModule('sentiment')">
-                        😊 情感分析
-                    </button>
-                    <button class="module-btn" data-module="rating" onclick="switchModule('rating')">
-                        📊 评分分布
-                    </button>
-                    <button class="module-btn" data-module="trend" onclick="switchModule('trend')">
-                        📈 情感趋势
-                    </button>
-                    <button class="module-btn" data-module="wordcloud" onclick="switchModule('wordcloud')">
-                        ☁️ 词云分析
-                    </button>
-                </div>
-
-                <!-- 情感分析模块 -->
-                <div id="sentiment-module" class="module-content active">
-                    <div id="sentiment-summary" class="result-area" style="min-height: 300px;">
-                        <div style="color:#999; text-align:center; padding:40px;">
-                            请先选择数据源并点击"加载数据"
+            <div>
+                <div class="card">
+                    <h2>📊 分析模块</h2>
+                    <div class="analysis-modules">
+                        <button class="module-btn active" data-module="sentiment" onclick="switchModule('sentiment')">🥧 情感分布</button>
+                        <button class="module-btn" data-module="rating" onclick="switchModule('rating')">📊 评分分布</button>
+                        <button class="module-btn" data-module="trend" onclick="switchModule('trend')">📈 情感趋势</button>
+                        <button class="module-btn" data-module="wordcloud" onclick="switchModule('wordcloud')">☁️ 词云分析</button>
+                    </div>
+                    <div id="sentiment-module" class="module-content active">
+                        <div id="sentiment-pie-chart" class="pie-chart-container">
+                            <div id="sentiment-pie-echarts" style="width: 100%; height: 350px;"></div>
+                            <div style="margin-top: 15px; font-size: 13px; color: #64748b; text-align: center;" id="sentiment-stats-info">
+                                请先选择数据源并点击"加载数据"
+                            </div>
                         </div>
                     </div>
-                    <div id="sentiment-chart" class="chart-container"></div>
-                    <div class="ml-info">
-                        <strong>🤖 BERT预训练情感分析模型</strong><br>
-                        使用 Google BERT-base-chinese 预训练模型进行微调，基于豆瓣真实评论数据训练。<br>
-                        📊 模型特点：12层Transformer架构、110M参数、上下文语义理解、支持中文短文本情感分类。<br>
-                        🔬 相比朴素贝叶斯：准确率提升15-20%，能理解复杂语义和情感转折。
-                    </div>
-                </div>
-
-                <!-- 评分分布模块 -->
-                <div id="rating-module" class="module-content">
-                    <div id="rating-chart" class="chart-container" style="min-height: 350px;">
-                        <div style="color:#999; text-align:center; padding:60px;">
-                            请先加载数据，然后点击"评分分布"查看
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 情感趋势模块 -->
-                <div id="trend-module" class="module-content">
-                    <div id="trend-chart" class="chart-container" style="min-height: 350px;">
-                        <div style="color:#999; text-align:center; padding:60px;">
-                            请先加载数据，然后点击"情感趋势"查看
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 词云分析模块 -->
-                <div id="wordcloud-module" class="module-content">
-                    <div id="wordcloud-chart" class="chart-container wordcloud-container" style="min-height: 450px;">
-                        <div style="color:#999; text-align:center; padding:60px;">
-                            请先加载数据，然后点击"词云分析"查看
-                        </div>
-                    </div>
+                    <div id="rating-module" class="module-content"><div id="rating-chart" class="chart-container" style="min-height: 350px;"><div style="color:#94a3b8; text-align:center; padding:60px;">请先加载数据，然后点击"评分分布"查看</div></div></div>
+                    <div id="trend-module" class="module-content"><div id="trend-chart" class="chart-container" style="min-height: 350px;"><div style="color:#94a3b8; text-align:center; padding:60px;">请先加载数据，然后点击"情感趋势"查看</div></div></div>
+                    <div id="wordcloud-module" class="module-content"><div id="wordcloud-chart" class="chart-container wordcloud-container" style="min-height: 380px;"><div style="color:#94a3b8; text-align:center; padding:60px;">请先加载数据，然后点击"词云分析"查看</div></div></div>
                 </div>
             </div>
         </div>
-
-        <div class="card">
-            <h2>📝 评论列表 <span style="font-size:12px; color:#666; font-weight:normal;">(朴素贝叶斯情感分析结果)</span></h2>
-            <div id="reviews-list" class="result-area" style="max-height: 400px;">
-                <div style="color:#999; text-align:center; padding:40px;">请先加载数据</div>
-            </div>
-        </div>
+        <div class="card"><h2>📝 评论列表 <span style="font-size:12px; color:#64748b; font-weight:normal;">(智能情感分析结果)</span></h2><div id="reviews-list" class="result-area" style="max-height: 400px;"><div style="color:#94a3b8; text-align:center; padding:40px;">请先加载数据</div></div></div>
     </div>
 
-    <!-- 影视分析标签页 -->
+    <!-- ==================== 影视分析标签页（第三个板块） ==================== -->
     <div id="movie-analysis" class="tab-content">
         <div class="grid-2">
             <div class="card">
@@ -381,10 +538,9 @@
                 <button class="btn btn-primary" onclick="searchMovie()">🔍 搜索电影</button>
                 <div id="suggestions-area" style="margin-top: 10px;"></div>
             </div>
-
             <div class="card">
-                <h2>📚 内置热门电影</h2>
-                <select id="builtin-movie" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <h2>📚 热门电影</h2>
+                <select id="builtin-movie" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0;">
                     <option value="肖申克的救赎">肖申克的救赎 (9.7分)</option>
                     <option value="霸王别姬">霸王别姬 (9.6分)</option>
                     <option value="阿甘正传">阿甘正传 (9.5分)</option>
@@ -394,37 +550,34 @@
                     <option value="我不是药神">我不是药神 (9.0分)</option>
                     <option value="千与千寻">千与千寻 (9.4分)</option>
                 </select>
-                <button class="btn btn-success" onclick="analyzeBuiltin()" style="margin-top: 10px;">分析这部电影</button>
+                <button class="btn btn-success" onclick="analyzeBuiltin()" style="margin-top: 10px;">查看详情</button>
             </div>
         </div>
-
         <div class="grid-2">
             <div class="card">
-                <h2>📽️ 电影详细信息</h2>
+                <h2>🎞️ 电影详情</h2>
                 <div id="movie-info" class="result-area" style="min-height: 250px;">
-                    <div style="color:#999; text-align:center; padding:40px;">请搜索或选择电影</div>
+                    <div style="color:#94a3b8; text-align:center; padding:40px;">请搜索或选择电影</div>
                 </div>
             </div>
-
             <div class="card">
                 <h2>⭐ 电影评分分析</h2>
                 <div id="movie-rating-info" class="result-area" style="min-height: 250px;">
-                    <div style="color:#999; text-align:center; padding:40px;">搜索电影后显示分析</div>
+                    <div style="color:#94a3b8; text-align:center; padding:40px;">搜索电影后显示分析</div>
                 </div>
             </div>
         </div>
-
         <div class="grid-2">
             <div class="card">
                 <h2>🎭 类型分析</h2>
                 <div id="genre-analysis" class="result-area">
-                    <div style="color:#999; text-align:center; padding:20px;">选择电影后查看类型分析</div>
+                    <div style="color:#94a3b8; text-align:center; padding:20px;">选择电影后查看类型分析</div>
                 </div>
             </div>
             <div class="card">
-                <h2>🎬 导演/演员影响力</h2>
+                <h2>🎬 主创信息</h2>
                 <div id="influence-analysis" class="result-area">
-                    <div style="color:#999; text-align:center; padding:20px;">选择电影后查看影响力分析</div>
+                    <div style="color:#94a3b8; text-align:center; padding:20px;">选择电影后查看主创信息</div>
                 </div>
             </div>
         </div>
@@ -432,156 +585,303 @@
 </div>
 
 <script>
+    // 存储爬取数据的缓存（避免重复分析）
+    let crawledDataCache = {};
+
+    // 存储最后一次爬取的原始数据（用于下载）
+    let lastCrawledRawData = null;
+    let lastCrawledMovieName = '';
+
+    // 现有变量定义
     let currentReviews = [];
     let allSources = {system: [], crawled: [], uploaded: []};
     let selectedFileObj = null;
     let currentAnalysisData = null;
     let currentSourceType = 'system';
     let currentSourceName = '';
+    let sentimentChart = null; // ECharts实例
+    let tabDataCache = {
+        'data-collection': { crawlResult: null, crawlStatus: null, crawlStatusClass: '', crawlMovieName: '', crawlCount: '200' },
+        'data-analysis': { analysisData: null, sourceType: 'system', sourceName: '', sentimentPieHtml: null, reviewsListHtml: null, ratingChartHtml: null, trendChartHtml: null, wordcloudChartHtml: null, activeModule: 'sentiment', hotKeywordsHtml: null },
+        'movie-analysis': { movieInfoHtml: null, movieRatingHtml: null, genreAnalysisHtml: null, influenceAnalysisHtml: null, searchMovieName: '让子弹飞', builtinMovieValue: '肖申克的救赎' }
+    };
+    let currentActiveTab = 'data-collection';
 
-    // 切换标签页
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            if (btn.getAttribute('data-tab') === tabId) {
-                btn.classList.add('active');
+    function switchTab(tabId) { saveCurrentTabData(); document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(tabId).classList.add('active'); document.querySelectorAll('.tab-btn').forEach(btn => { if (btn.getAttribute('data-tab') === tabId) btn.classList.add('active'); }); currentActiveTab = tabId; restoreTabData(tabId); if (tabId === 'data-analysis' && lastCrawledMovieName) refreshAndSelectCrawledData(); }
+    function refreshAndSelectCrawledData() { const sourceTypeSelect = document.getElementById('source-type'); if (sourceTypeSelect) { sourceTypeSelect.value = 'crawled'; loadDataSources(); setTimeout(() => { const dataSelect = document.getElementById('data-select'); if (dataSelect && lastCrawledMovieName) { for(let i = 0; i < dataSelect.options.length; i++) { if(dataSelect.options[i].value === lastCrawledMovieName) { dataSelect.selectedIndex = i; break; } } } }, 300); } }
+    function saveCurrentTabData() { if (currentActiveTab === 'data-collection') { const crawlResultDiv = document.getElementById('crawl-result'); const crawlStatusDiv = document.getElementById('crawl-status'); const crawlMovieInput = document.getElementById('crawl-movie'); const crawlCountInput = document.getElementById('crawl-count'); tabDataCache['data-collection'] = { crawlResult: crawlResultDiv ? crawlResultDiv.innerHTML : null, crawlStatus: crawlStatusDiv ? crawlStatusDiv.innerHTML : null, crawlStatusClass: crawlStatusDiv ? crawlStatusDiv.className : '', crawlMovieName: crawlMovieInput ? crawlMovieInput.value : '', crawlCount: crawlCountInput ? crawlCountInput.value : '200' }; } }
+    function restoreTabData(tabId) { if (tabId === 'data-collection') { const cache = tabDataCache['data-collection']; const crawlResultDiv = document.getElementById('crawl-result'); const crawlStatusDiv = document.getElementById('crawl-status'); const crawlMovieInput = document.getElementById('crawl-movie'); const crawlCountInput = document.getElementById('crawl-count'); const progressFill = document.getElementById('crawl-progress-fill'); if (crawlResultDiv && cache.crawlResult) crawlResultDiv.innerHTML = cache.crawlResult; if (crawlStatusDiv && cache.crawlStatus) { crawlStatusDiv.innerHTML = cache.crawlStatus; crawlStatusDiv.className = cache.crawlStatusClass || 'status status-info'; } if (crawlMovieInput && cache.crawlMovieName !== undefined) crawlMovieInput.value = cache.crawlMovieName; if (crawlCountInput && cache.crawlCount !== undefined) crawlCountInput.value = cache.crawlCount; if (progressFill && cache.crawlResult && cache.crawlResult !== '<div style="color:#999; text-align:center; padding:40px;">等待爬取...</div>') progressFill.style.width = '100%'; } }
+    function scrollToModule(moduleId) { const element = document.getElementById(moduleId); if (element) { element.scrollIntoView({ behavior: 'smooth', block: 'start' }); const moduleName = moduleId.replace('-module', ''); switchModule(moduleName); } }
+    function scrollToReviews() { const reviewsElement = document.getElementById('reviews-list'); if (reviewsElement) reviewsElement.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    function switchModule(moduleId) { document.querySelectorAll('.module-btn').forEach(btn => btn.classList.remove('active')); document.querySelector(`.module-btn[data-module="${moduleId}"]`).classList.add('active'); document.querySelectorAll('.module-content').forEach(content => content.classList.remove('active')); document.getElementById(`${moduleId}-module`).classList.add('active'); tabDataCache['data-analysis'].activeModule = moduleId; if (currentAnalysisData) renderCurrentModule(moduleId); }
+    function renderCurrentModule(moduleId) { if(moduleId === 'sentiment') renderSentimentPieChartECharts(); else if(moduleId === 'rating') renderRatingDistribution(); else if(moduleId === 'trend') renderTrendChart(); else if(moduleId === 'wordcloud') renderWordCloud(); }
+
+    // 使用ECharts渲染情感分布饼图
+    function renderSentimentPieChartECharts() {
+        if (!currentAnalysisData) return;
+        const data = currentAnalysisData;
+        const total = data.total || 0;
+        const positive = data.positive || 0;
+        const neutral = data.neutral || 0;
+        const negative = data.negative || 0;
+
+        if (total === 0) {
+            const statsDiv = document.getElementById('sentiment-stats-info');
+            statsDiv.innerHTML = '暂无情感数据';
+            if (sentimentChart) {
+                sentimentChart.clear();
+                sentimentChart.setOption({
+                    title: { text: '暂无数据', left: 'center', top: 'center' }
+                });
+            }
+            return;
+        }
+
+        const positivePct = (positive / total * 100).toFixed(1);
+        const neutralPct = (neutral / total * 100).toFixed(1);
+        const negativePct = (negative / total * 100).toFixed(1);
+
+        const statsDiv = document.getElementById('sentiment-stats-info');
+        statsDiv.innerHTML = `🤖 智能分析 | 基于 ${total} 条评论<br>
+            <span style="color:#10b981;">正面: ${positive}条 (${positivePct}%)</span> |
+            <span style="color:#f59e0b;">中性: ${neutral}条 (${neutralPct}%)</span> |
+            <span style="color:#ef4444;">负面: ${negative}条 (${negativePct}%)</span>`;
+
+        const chartDom = document.getElementById('sentiment-pie-echarts');
+        if (!chartDom) return;
+
+        if (sentimentChart) {
+            sentimentChart.dispose();
+        }
+        sentimentChart = echarts.init(chartDom);
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: {d}% ({c}条)'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                data: ['正面', '中性', '负面'],
+                textStyle: { fontSize: 12, color: '#475569' }
+            },
+            series: [{
+                name: '情感分布',
+                type: 'pie',
+                radius: '55%',
+                center: ['50%', '50%'],
+                data: [
+                    { value: positive, name: '正面', itemStyle: { color: '#10b981' } },
+                    { value: neutral, name: '中性', itemStyle: { color: '#f59e0b' } },
+                    { value: negative, name: '负面', itemStyle: { color: '#ef4444' } }
+                ],
+                emphasis: {
+                    scale: true,
+                    label: { show: true, fontWeight: 'bold' }
+                },
+                label: {
+                    show: true,
+                    formatter: '{b}: {d}%',
+                    fontSize: 12
+                },
+                labelLine: { show: true }
+            }],
+            graphic: [{
+                type: 'text',
+                left: 'center',
+                top: 'center',
+                style: {
+                    text: total + '条',
+                    fill: '#334155',
+                    fontSize: 18,
+                    fontWeight: 'bold'
+                },
+                z: 100
+            }]
+        };
+
+        sentimentChart.setOption(option);
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            if (sentimentChart) sentimentChart.resize();
+        });
+    }
+
+    // 渲染情感分布饼图（兼容旧接口）
+    function renderSentimentPieChart() {
+        renderSentimentPieChartECharts();
+    }
+
+    // 直接从数据渲染情感分布饼图
+    function renderSentimentPieChartFromData(data) {
+        currentAnalysisData = data;
+        renderSentimentPieChartECharts();
+    }
+
+    // 预定义电影评论常用词库（100+个词）
+    const COMMON_MOVIE_WORDS = [
+        // 电影元素类
+        '剧情', '演技', '特效', '画面', '音乐', '导演', '演员', '剧本', '结局', '开头',
+        '节奏', '剪辑', '场景', '对白', '服装', '道具', '美术', '灯光', '摄影', '构图',
+        '色调', '造型', '配音', '字幕', '片头', '片尾', '彩蛋', '预告', '海报', '布景',
+        '运镜', '转场', '蒙太奇', '长镜头', '分镜', '特写', '慢动作', '倒叙', '插叙',
+        // 情感体验类
+        '感动', '震撼', '精彩', '无聊', '好看', '难看', '推荐', '失望', '惊喜', '经典',
+        '神作', '烂片', '搞笑', '泪目', '热血', '治愈', '温馨', '恐怖', '悬疑', '科幻',
+        '爱情', '动作', '喜剧', '悲剧', '青春', '成长', '人生', '梦想', '希望', '自由',
+        '浪漫', '虐心', '甜宠', '烧脑', '压抑', '释放', '共鸣', '代入感', '沉浸感',
+        // 评价类
+        '笑点', '泪点', '燃点', '亮点', '槽点', '遗憾', '不足', '平庸', '优秀', '炸裂',
+        '惊艳', '绝了', '完美', '满分', '及格', '一般', '还行', '凑合', '拉胯', '敷衍',
+        '良心', '诚意', '粗糙', '精致', '细腻', '流畅', '拖沓', '紧凑', '松散',
+        // 剧情相关
+        '反转', '高潮', '伏笔', '铺垫', '冲突', '矛盾', '线索', '悬念', '真相', '秘密',
+        '阴谋', '复仇', '救赎', '牺牲', '奉献', '勇气', '信念', '坚持', '放弃', '选择',
+        '命运', '轮回', '因果', '报应', '惩罚', '原谅', '和解', '告别', '重逢', '相遇',
+        // 人物相关
+        '主角', '配角', '反派', '英雄', '女主', '男主', '龙套', '群演', '颜值', '气质',
+        '魅力', '气场', '神态', '表情', '眼神', '笑容', '泪水', '怒吼', '沉默', '哭泣',
+        '微笑', '凝视', '回眸', '背影', '侧脸', '颜值爆表', '演技在线', '实力派',
+        // 时间地点类
+        '年代', '时代', '背景', '设定', '世界观', '架空', '现代', '古代', '未来', '末世',
+        '校园', '职场', '家庭', '社会', '都市', '乡村', '战争', '和平', '灾难', '末日',
+        // 风格类型
+        '文艺', '商业', '独立', '小众', '大众', '主流', '另类', '实验', '先锋', '复古',
+        '写实', '魔幻', '写意', '抽象', '具象', '夸张', '含蓄', '直白', '隐喻', '象征'
+    ];
+
+    // 停用词表
+    const STOPWORDS = new Set([
+        '的', '了', '是', '在', '我', '有', '和', '就', '不', '人', '都', '一', '个', '也', '这', '那',
+        '到', '说', '为', '以', '吧', '吗', '呢', '啊', '哦', '呀', '啦', '哈', '嘿', '哎', '嗯', '额',
+        '电影', '这部', '一部', '真的', '觉得', '感觉', '非常', '特别', '一个', '没有', '不是', '就是',
+        '但是', '还是', '可以', '很', '太', '看', '让', '给', '会', '能', '都', '也', '有', '在', '还',
+        '就', '与', '和', '对', '从', '被', '把', '它', '她', '他', '我们', '你们', '他们', '什么', '怎么',
+        '为什么', '如何', '这样', '那样', '那么', '这么', '多么', '自己', '已经', '还是', '或者', '并且',
+        '虽然', '但是', '因为', '所以', '如果', '那么', '然后', '接着', '最后', '终于', '刚刚', '一直',
+        '总是', '经常', '有时', '从来', '根本', '完全', '绝对', '可能', '大概', '也许', '应该', '必须',
+        '需要', '想要', '喜欢', '讨厌', '觉得', '认为', '希望', '期待', '失望', '惊喜', '真的', '感觉',
+        '觉得', '一部', '这部', '那个', '这种', '那种', '这样', '那样', '真的', '确实', '其实', '不过',
+        '虽然', '然而', '因此', '所以', '而且', '并且', '或者', '还是', '等等', '例如', '比如', '还有',
+        '以及', '此外', '另外', '总之', '总的来说', '看起来', '看上去', '看起来'
+    ]);
+
+    // 生成热门关键词（使用预定义词库）
+    function generateHotKeywords(reviews) {
+        if (!reviews || reviews.length === 0) return [];
+
+        const allText = reviews.map(r => r.content || '').join(' ');
+        const keywords = [];
+
+        // 统计预定义词库中的词在评论中出现的次数
+        COMMON_MOVIE_WORDS.forEach(word => {
+            if (STOPWORDS.has(word)) return;
+            const regex = new RegExp(word, 'g');
+            const count = (allText.match(regex) || []).length;
+            if (count >= 2) {
+                keywords.push({ word: word, count: count });
             }
         });
+
+        // 按频率降序排序，取前15个
+        keywords.sort((a, b) => b.count - a.count);
+        return keywords.slice(0, 15);
     }
 
-    // 切换分析模块
-    function switchModule(moduleId) {
-        document.querySelectorAll('.module-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`.module-btn[data-module="${moduleId}"]`).classList.add('active');
+    // 渲染热门关键词（统一字体大小）
+    function renderHotKeywords(keywords) {
+        const container = document.getElementById('hot-keywords');
+        if (!container) return;
 
-        document.querySelectorAll('.module-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(`${moduleId}-module`).classList.add('active');
-
-        if (currentAnalysisData) {
-            renderCurrentModule(moduleId);
+        if (!keywords || keywords.length === 0) {
+            container.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:30px;">暂无关键词数据（评论内容可能较少）</div>';
+            return;
         }
+
+        let html = '<div class="keywords-container">';
+        keywords.forEach(item => {
+            html += `<span class="keyword-tag" onclick="searchKeyword('${escapeHtml(item.word)}')" title="点击搜索包含此关键词的评论">
+                ${escapeHtml(item.word)}<span class="count">${item.count}</span>
+            </span>`;
+        });
+        html += '</div><div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">💡 点击关键词可搜索并高亮相关评论</div>';
+        container.innerHTML = html;
     }
 
-    function renderCurrentModule(moduleId) {
-        switch(moduleId) {
-            case 'sentiment':
-                renderSentimentAnalysis();
-                break;
-            case 'rating':
-                renderRatingDistribution();
-                break;
-            case 'trend':
-                renderTrendChart();
-                break;
-            case 'wordcloud':
-                renderWordCloud();
-                break;
-        }
-    }
+    // 搜索关键词并高亮评论
+    function searchKeyword(keyword) {
+        const reviewsList = document.getElementById('reviews-list');
+        if (!reviewsList) return;
 
-    function renderSentimentAnalysis() {
-        if (!currentAnalysisData) return;
+        const reviewItems = reviewsList.querySelectorAll('.review-item');
+        let foundCount = 0;
 
-        const data = currentAnalysisData;
-        const summaryDiv = document.getElementById('sentiment-summary');
-        const chartDiv = document.getElementById('sentiment-chart');
+        reviewItems.forEach(item => {
+            const content = item.querySelector('.review-content');
+            if (content && content.innerText.includes(keyword)) {
+                content.style.backgroundColor = '#fef3c7';
+                content.style.transition = 'background-color 0.3s';
+                foundCount++;
+                setTimeout(() => {
+                    content.style.backgroundColor = '';
+                }, 2000);
+            }
+        });
 
-        const avgConfidence = data.avg_confidence ? (data.avg_confidence * 100).toFixed(1) : 0;
-        const confidenceLevel = avgConfidence > 80 ? '高' : (avgConfidence > 60 ? '中' : '低');
-
-        summaryDiv.innerHTML = `
-            <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:20px;">
-                <div class="stat-card" style="flex:1; min-width:100px;">
-                    <div class="number">${data.total}</div>
-                    <div class="label">总评论数</div>
-                </div>
-                <div class="stat-card stat-positive" style="flex:1; min-width:100px;">
-                    <div class="number">${data.positive}</div>
-                    <div class="label">😊 正面 (${data.positive_pct.toFixed(1)}%)</div>
-                </div>
-                <div class="stat-card stat-neutral" style="flex:1; min-width:100px;">
-                    <div class="number">${data.neutral}</div>
-                    <div class="label">😐 中性 (${data.neutral_pct.toFixed(1)}%)</div>
-                </div>
-                <div class="stat-card stat-negative" style="flex:1; min-width:100px;">
-                    <div class="number">${data.negative}</div>
-                    <div class="label">😞 负面 (${data.negative_pct.toFixed(1)}%)</div>
-                </div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:${data.positive_pct}%; background:#48bb78;"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:8px;">
-                <span style="color:#48bb78;">正面 ${data.positive_pct.toFixed(0)}%</span>
-                <span style="color:#ed8936;">中性 ${data.neutral_pct.toFixed(0)}%</span>
-                <span style="color:#f56565;">负面 ${data.negative_pct.toFixed(0)}%</span>
-            </div>
-            <div style="margin-top: 15px; padding: 12px; background: #e6f7ff; border-radius: 8px; border-left: 4px solid #667eea;">
-                <div style="font-size: 13px; color: #333;">
-                    <strong>🤖 朴素贝叶斯模型分析结果</strong><br>
-                    模型平均置信度: ${confidenceLevel} (${avgConfidence}%)<br>
-                    算法: TF-IDF特征提取 + 多项式朴素贝叶斯分类器<br>
-                    ${data.positive > data.negative ? '📊 总体评价: 正面评价占主导，观众口碑较好' : (data.negative > data.positive ? '📊 总体评价: 负面评价较多，建议谨慎观看' : '📊 总体评价: 评价两极分化，建议参考具体评论')}
-                </div>
-            </div>
-        `;
-
-        if (data.sentiment_chart) {
-            chartDiv.innerHTML = `<img src="data:image/png;base64,${data.sentiment_chart}" style="max-width:100%; border-radius:8px;">`;
+        if (foundCount > 0) {
+            showToast(`🔍 找到 ${foundCount} 条包含"${keyword}"的评论`, 'success');
+            reviewsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            showToast(`未找到包含"${keyword}"的评论`, 'warning');
         }
     }
 
     function renderRatingDistribution() {
+        if (!currentAnalysisData) return;
         const chartDiv = document.getElementById('rating-chart');
-        chartDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 生成评分分布图...</div>';
+        chartDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 正在生成评分分布图...</div>';
 
         fetch('/api/get_rating_dist', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({source_type: currentSourceType, name: currentSourceName})
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    chartDiv.innerHTML = `<img src="data:image/png;base64,${data.image}" style="max-width:100%; border-radius:8px;">`;
-                } else {
-                    chartDiv.innerHTML = `<div style="color:red; text-align:center; padding:40px;">❌ ${data.error}</div>`;
-                }
-            })
-            .catch(err => {
-                chartDiv.innerHTML = `<div style="color:red; text-align:center; padding:40px;">❌ 请求失败: ${err.message}</div>`;
-            });
+        }).then(res => res.json()).then(data => {
+            if (data.success && data.image) {
+                chartDiv.innerHTML = `<img src="data:image/png;base64,${data.image}" alt="评分分布图" style="max-width:100%; border-radius:8px;">`;
+                tabDataCache['data-analysis'].ratingChartHtml = chartDiv.innerHTML;
+            } else {
+                chartDiv.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:40px;">暂无评分数据</div>';
+            }
+        }).catch(() => {
+            chartDiv.innerHTML = '<div style="color:#ef4444; text-align:center; padding:40px;">加载失败</div>';
+        });
     }
 
     function renderTrendChart() {
+        if (!currentAnalysisData) return;
         const chartDiv = document.getElementById('trend-chart');
-        chartDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 生成情感趋势图...</div>';
+        chartDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 正在生成情感趋势图...</div>';
 
         fetch('/api/get_trend_chart', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({source_type: currentSourceType, name: currentSourceName})
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    chartDiv.innerHTML = `<img src="data:image/png;base64,${data.image}" style="max-width:100%; border-radius:8px;">`;
-                } else {
-                    chartDiv.innerHTML = `<div style="color:red; text-align:center; padding:40px;">❌ ${data.error}</div>`;
-                }
-            })
-            .catch(err => {
-                chartDiv.innerHTML = `<div style="color:red; text-align:center; padding:40px;">❌ 请求失败: ${err.message}</div>`;
-            });
+        }).then(res => res.json()).then(data => {
+            if (data.success && data.image) {
+                chartDiv.innerHTML = `<img src="data:image/png;base64,${data.image}" alt="情感趋势图" style="max-width:100%; border-radius:8px;">`;
+                tabDataCache['data-analysis'].trendChartHtml = chartDiv.innerHTML;
+            } else {
+                chartDiv.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:40px;">暂无趋势数据</div>';
+            }
+        }).catch(() => {
+            chartDiv.innerHTML = '<div style="color:#ef4444; text-align:center; padding:40px;">加载失败</div>';
+        });
     }
 
     function renderWordCloud() {
+        if (!currentAnalysisData) return;
         const chartDiv = document.getElementById('wordcloud-chart');
         chartDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 正在分析评论内容，生成高频词汇图...</div>';
 
@@ -594,89 +894,166 @@
             .then(data => {
                 if (data.success && data.image) {
                     chartDiv.innerHTML = `
-                        <div>
-                            <img src="data:image/png;base64,${data.image}" style="max-width:100%; border-radius:8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                            <div style="margin-top: 12px; font-size: 12px; color: #666; text-align: center;">
-                                📊 高频词汇基于评论内容生成，字体越大表示出现频率越高
-                            </div>
+                    <div>
+                        <img src="data:image/png;base64,${data.image}" style="max-width:100%; border-radius:8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <div style="margin-top: 12px; font-size: 12px; color: #64748b; text-align: center;">
+                            📊 高频词汇基于评论内容生成，字体越大表示出现频率越高
                         </div>
-                    `;
+                    </div>
+                `;
+                    tabDataCache['data-analysis'].wordcloudChartHtml = chartDiv.innerHTML;
                 } else {
-                    chartDiv.innerHTML = `<div style="color:red; text-align:center; padding:40px;">❌ ${data.error || '生成失败'}<br><small>请确保评论内容包含足够的中文词汇</small></div>`;
+                    chartDiv.innerHTML = `<div style="color:#ef4444; text-align:center; padding:40px;">❌ ${data.error || '生成失败'}<br><small>请确保评论内容包含足够的中文词汇</small></div>`;
                 }
             })
             .catch(err => {
-                chartDiv.innerHTML = `<div style="color:red; text-align:center; padding:40px;">❌ 请求失败: ${err.message}</div>`;
+                chartDiv.innerHTML = `<div style="color:#ef4444; text-align:center; padding:40px;">❌ 请求失败: ${err.message}</div>`;
             });
     }
 
-    function loadAnalysisData() {
-        currentSourceType = document.getElementById('source-type').value;
-        const select = document.getElementById('data-select');
-        currentSourceName = select.value;
+    function displayAnalysisResult(data, resultDiv) {
+        currentAnalysisData = data;
 
-        if (!currentSourceName || currentSourceName === '暂无数据') {
-            alert('请选择有效的数据源');
+        let reviewsHtml = '';
+        data.reviews.forEach(review => {
+            let sentimentClass = review.sentiment === 'positive' ? 'sentiment-positive' : (review.sentiment === 'negative' ? 'sentiment-negative' : 'sentiment-neutral');
+            let sentimentText = review.sentiment_cn || (review.sentiment === 'positive' ? '正面' : (review.sentiment === 'negative' ? '负面' : '中性'));
+            let stars = '';
+            for (let i = 0; i < review.rating; i++) stars += '⭐';
+            for (let i = 0; i < 5 - review.rating; i++) stars += '☆';
+            reviewsHtml += `<div class="review-item"><div class="review-header"><span class="review-user">${escapeHtml(review.user)}</span><span class="review-rating">${stars}</span><span class="review-sentiment ${sentimentClass}">${sentimentText}</span></div><div class="review-content">${escapeHtml(review.content)}</div><div class="review-time" style="font-size:11px; color:#94a3b8; margin-top:5px;">📅 ${review.time}</div></div>`;
+        });
+        resultDiv.innerHTML = reviewsHtml || '<div style="color:#94a3b8; text-align:center; padding:40px;">暂无评论</div>';
+
+        const hotKeywords = generateHotKeywords(data.reviews);
+        renderHotKeywords(hotKeywords);
+
+        renderSentimentPieChartFromData(data);
+
+        const activeModule = tabDataCache['data-analysis'].activeModule || 'sentiment';
+        if (activeModule !== 'sentiment') {
+            renderCurrentModule(activeModule);
+        }
+
+        document.getElementById('quick-actions').style.display = 'block';
+        document.getElementById('hot-keywords-card').style.display = 'block';
+    }
+
+    function loadAnalysisData() {
+        const sourceType = document.getElementById('source-type').value;
+        const dataSelect = document.getElementById('data-select');
+        const selectedName = dataSelect.options[dataSelect.selectedIndex]?.value;
+
+        if (!selectedName) {
+            showToast('请选择数据源', 'error');
             return;
         }
 
-        const summaryDiv = document.getElementById('sentiment-summary');
-        const reviewsDiv = document.getElementById('reviews-list');
+        currentSourceType = sourceType;
+        currentSourceName = selectedName;
 
-        summaryDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 朴素贝叶斯模型正在分析评论情感...</div>';
-        reviewsDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 加载中...</div>';
+        const resultDiv = document.getElementById('reviews-list');
+        resultDiv.innerHTML = '<div style="text-align:center; padding:40px;"><span class="loading"></span> 加载中...</div>';
+
+        const statsDiv = document.getElementById('sentiment-stats-info');
+        statsDiv.innerHTML = '<span class="loading"></span> 加载中...';
+
+        if (sentimentChart) {
+            sentimentChart.clear();
+            sentimentChart.setOption({
+                title: { text: '加载中...', left: 'center', top: 'center' }
+            });
+        }
+
+        document.getElementById('hot-keywords').innerHTML = '<div style="text-align:center; padding:30px;"><span class="loading"></span> 分析中...</div>';
+
+        if (sourceType === 'crawled' && crawledDataCache[selectedName]) {
+            console.log(`使用缓存的爬取数据: ${selectedName}`);
+            const cachedData = crawledDataCache[selectedName];
+            displayAnalysisResult(cachedData, resultDiv);
+            showToast(`加载成功（使用缓存），共 ${cachedData.total} 条评论`, 'success');
+            return;
+        }
 
         fetch('/api/analyze_sentiment', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({source_type: currentSourceType, name: currentSourceName})
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    currentAnalysisData = data;
-
-                    let reviewsHtml = '';
-                    (data.reviews || []).forEach(r => {
-                        let sentimentClass = r.sentiment === 'positive' ? 'sentiment-positive' : (r.sentiment === 'negative' ? 'sentiment-negative' : 'sentiment-neutral');
-                        let sentimentText = r.sentiment === 'positive' ? '正面' : (r.sentiment === 'negative' ? '负面' : '中性');
-                        let sentimentIcon = r.sentiment === 'positive' ? '😊' : (r.sentiment === 'negative' ? '😞' : '😐');
-                        let stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-                        let confidence = r.confidence ? (r.confidence * 100).toFixed(1) : 0;
-
-                        reviewsHtml += `<div class="review-item">
-                            <div class="review-header">
-                                <span class="review-user">${escapeHtml(r.user || '匿名用户')}</span>
-                                <span class="review-rating">${stars}</span>
-                                <span class="review-sentiment ${sentimentClass}">${sentimentIcon} ${sentimentText} <span class="confidence-badge">(置信度: ${confidence}%)</span></span>
-                            </div>
-                            <div class="review-content">${escapeHtml(r.content)}</div>
-                            <div style="font-size:11px; color:#999; margin-top:5px;">${r.time || ''}</div>
-                        </div>`;
-                    });
-                    reviewsDiv.innerHTML = reviewsHtml || '<div style="padding:20px; text-align:center;">暂无评论</div>';
-
-                    const activeModule = document.querySelector('.module-btn.active').getAttribute('data-module');
-                    renderCurrentModule(activeModule);
-                } else {
-                    summaryDiv.innerHTML = `<div style="color:red; padding:20px;">❌ ${data.error}</div>`;
-                    reviewsDiv.innerHTML = '';
-                    currentAnalysisData = null;
+            body: JSON.stringify({source_type: sourceType, name: selectedName})
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                if (sourceType === 'crawled') {
+                    crawledDataCache[selectedName] = data;
+                    console.log(`已缓存爬取数据: ${selectedName}`);
                 }
-            })
-            .catch(err => {
-                summaryDiv.innerHTML = `<div style="color:red; padding:20px;">❌ 请求失败: ${err.message}</div>`;
-                reviewsDiv.innerHTML = '';
-                currentAnalysisData = null;
-            });
+                displayAnalysisResult(data, resultDiv);
+                showToast(`加载成功，共 ${data.total} 条评论`, 'success');
+            } else {
+                resultDiv.innerHTML = `<div style="color:#ef4444; text-align:center; padding:40px;">加载失败: ${data.error}</div>`;
+                statsDiv.innerHTML = '加载失败';
+                document.getElementById('hot-keywords').innerHTML = '<div style="color:#ef4444; text-align:center; padding:30px;">加载失败</div>';
+                showToast(data.error, 'error');
+            }
+        }).catch(err => {
+            resultDiv.innerHTML = `<div style="color:#ef4444; text-align:center; padding:40px;">网络错误: ${err.message}</div>`;
+            statsDiv.innerHTML = '网络错误';
+            document.getElementById('hot-keywords').innerHTML = '<div style="color:#ef4444; text-align:center; padding:30px;">网络错误</div>';
+            showToast('网络错误', 'error');
+        });
     }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tabId = this.getAttribute('data-tab');
-            if (tabId) switchTab(tabId);
+    function onSourceTypeChange() { loadDataSources(); }
+
+    function loadDataSources() {
+        fetch('/api/get_data_sources').then(res=>res.json()).then(data=>{
+            if(data.success){
+                allSources=data.sources;
+                const type=document.getElementById('source-type').value;
+                const select=document.getElementById('data-select');
+                const currentValue=select.value;
+                select.innerHTML='';
+                let sources=allSources[type]||[];
+                if(sources.length===0){
+                    let option=document.createElement('option');
+                    option.value='';
+                    option.text='暂无数据';
+                    select.appendChild(option);
+                }else{
+                    sources.forEach(s=>{
+                        let option=document.createElement('option');
+                        option.value=s.name;
+                        option.text=`${s.name} (${s.count}条评论)`;
+                        select.appendChild(option);
+                    });
+                }
+                if(currentValue&&currentValue!==''){
+                    for(let i=0;i<select.options.length;i++){
+                        if(select.options[i].value===currentValue){
+                            select.selectedIndex=i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }).catch(err=>console.error('加载数据源失败:',err));
+    }
+
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-message ' + (type === 'error' ? 'toast-error' : '');
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2500);
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
         });
-    });
+    }
 
     function handleFileSelect(event) {
         const file = event.target.files[0];
@@ -690,114 +1067,371 @@
     }
 
     function uploadFile() {
-        const file = selectedFileObj;
         const movieName = document.getElementById('upload-movie-name').value.trim();
-        const statusDiv = document.getElementById('upload-status');
-
-        if (!file) {
-            statusDiv.innerHTML = '❌ 请先选择文件';
-            statusDiv.className = 'status status-error';
-            setTimeout(() => { statusDiv.innerHTML = ''; statusDiv.className = ''; }, 3000);
-            return;
-        }
         if (!movieName) {
-            alert('请输入影视名称');
+            showToast('请输入影视名称', 'error');
             return;
         }
+        if (!selectedFileObj) {
+            showToast('请先选择文件', 'error');
+            return;
+        }
+
+        const statusDiv = document.getElementById('upload-status');
+        statusDiv.innerHTML = '<span class="loading"></span> 上传中，正在进行智能情感分析...';
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', selectedFileObj);
         formData.append('movie_name', movieName);
 
-        statusDiv.innerHTML = '<span class="loading"></span> 上传中，朴素贝叶斯模型分析中...';
-        statusDiv.className = 'status status-info';
+        fetch('/api/upload_reviews', {
+            method: 'POST',
+            body: formData
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `✅ 上传成功！共 ${data.count} 条评论，智能分析已完成`;
+                showToast(`上传成功！共 ${data.count} 条评论`, 'success');
 
-        fetch('/api/upload_reviews', {method: 'POST', body: formData})
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    statusDiv.innerHTML = `✅ 已上传 ${data.movie_name} (${data.count}条评论，已用朴素贝叶斯分析)`;
-                    statusDiv.className = 'status status-success';
-                    loadDataSources();
-                    setTimeout(() => {
-                        document.getElementById('source-type').value = 'uploaded';
+                selectedFileObj = null;
+                document.getElementById('selected-file-name').innerHTML = '未选择任何文件';
+                document.getElementById('upload-file-input').value = '';
+                document.getElementById('upload-movie-name').value = '';
+
+                loadDataSources();
+
+                setTimeout(() => {
+                    switchTab('data-analysis');
+                    const sourceTypeSelect = document.getElementById('source-type');
+                    if (sourceTypeSelect) {
+                        sourceTypeSelect.value = 'uploaded';
                         loadDataSources();
                         setTimeout(() => {
-                            const select = document.getElementById('data-select');
-                            for(let i = 0; i < select.options.length; i++) {
-                                if(select.options[i].text.includes(data.movie_name)) {
-                                    select.selectedIndex = i;
-                                    break;
+                            const dataSelect = document.getElementById('data-select');
+                            if (dataSelect) {
+                                for (let i = 0; i < dataSelect.options.length; i++) {
+                                    if (dataSelect.options[i].value === movieName) {
+                                        dataSelect.selectedIndex = i;
+                                        break;
+                                    }
                                 }
                             }
                             loadAnalysisData();
-                        }, 500);
-                    }, 500);
+                        }, 300);
+                    }
+                }, 500);
+            } else {
+                statusDiv.innerHTML = `❌ 上传失败: ${data.error}`;
+                showToast(data.error, 'error');
+            }
+        }).catch(err => {
+            statusDiv.innerHTML = `❌ 网络错误: ${err.message}`;
+            showToast('网络错误', 'error');
+        });
+    }
+
+    // ==================== 影视分析板块函数 ====================
+    function searchMovie() {
+        const movieName = document.getElementById('search-movie').value.trim();
+        if (!movieName) {
+            showToast('请输入电影名称', 'error');
+            return;
+        }
+
+        const infoDiv = document.getElementById('movie-info');
+        infoDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 搜索中...</div>';
+
+        fetch('/api/search_movie', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({movie_name: movieName})
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    displayMovieInfo(data.data);
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        let suggestionsHtml = '<div class="suggestions"><strong>💡 您是不是想找:</strong><br>';
+                        data.suggestions.forEach(s => {
+                            suggestionsHtml += `<button class="suggestion-btn" onclick="document.getElementById('search-movie').value='${s}';searchMovie();">${s}</button>`;
+                        });
+                        suggestionsHtml += '</div>';
+                        document.getElementById('suggestions-area').innerHTML = suggestionsHtml;
+                    } else {
+                        document.getElementById('suggestions-area').innerHTML = '';
+                    }
                 } else {
-                    statusDiv.innerHTML = `❌ ${data.error}`;
-                    statusDiv.className = 'status status-error';
+                    infoDiv.innerHTML = `<div style="color:#ef4444; text-align:center; padding:40px;">未找到电影《${movieName}》<br><span style="font-size:12px;">${data.message || ''}</span></div>`;
+                    document.getElementById('movie-rating-info').innerHTML = '<div style="color:#94a3b8; text-align:center; padding:40px;">请先搜索电影</div>';
+                    document.getElementById('genre-analysis').innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px;">请先搜索电影</div>';
+                    document.getElementById('influence-analysis').innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px;">请先搜索电影</div>';
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        let suggestionsHtml = '<div class="suggestions"><strong>💡 您是不是想找:</strong><br>';
+                        data.suggestions.forEach(s => {
+                            suggestionsHtml += `<button class="suggestion-btn" onclick="document.getElementById('search-movie').value='${s}';searchMovie();">${s}</button>`;
+                        });
+                        suggestionsHtml += '</div>';
+                        document.getElementById('suggestions-area').innerHTML = suggestionsHtml;
+                    }
+                    showToast(data.message || '未找到电影', 'error');
                 }
             })
             .catch(err => {
-                statusDiv.innerHTML = `❌ 上传失败：${err.message}`;
-                statusDiv.className = 'status status-error';
+                infoDiv.innerHTML = `<div style="color:#ef4444; text-align:center; padding:40px;">网络错误: ${err.message}</div>`;
+                showToast('搜索失败', 'error');
             });
     }
 
-    function loadDataSources() {
-        fetch('/api/get_data_sources')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    allSources = data.sources;
-                    const type = document.getElementById('source-type').value;
-                    const select = document.getElementById('data-select');
-                    select.innerHTML = '';
-                    let sources = allSources[type] || [];
-                    if (sources.length === 0) {
-                        let option = document.createElement('option');
-                        option.value = '';
-                        option.text = '暂无数据';
-                        select.appendChild(option);
-                    } else {
-                        sources.forEach(s => {
-                            let option = document.createElement('option');
-                            option.value = s.name;
-                            option.text = `${s.name} (${s.count}条评论)`;
-                            select.appendChild(option);
-                        });
-                    }
-                }
-            })
-            .catch(err => console.error('加载数据源失败:', err));
+    function analyzeBuiltin() {
+        const select = document.getElementById('builtin-movie');
+        const movieName = select.options[select.selectedIndex]?.value;
+        if (movieName) {
+            document.getElementById('search-movie').value = movieName;
+            searchMovie();
+        }
     }
 
-    function startCrawling() {
+    function displayMovieInfo(movie) {
+        const infoDiv = document.getElementById('movie-info');
+        const ratingDiv = document.getElementById('movie-rating-info');
+        const genreDiv = document.getElementById('genre-analysis');
+        const influenceDiv = document.getElementById('influence-analysis');
+
+        // 构建电影详情HTML
+        let stars = '';
+        let ratingNum = parseFloat(movie.rating);
+        if (!isNaN(ratingNum)) {
+            for (let i = 0; i < Math.floor(ratingNum); i++) stars += '⭐';
+            for (let i = 0; i < 5 - Math.floor(ratingNum); i++) stars += '☆';
+        }
+
+        // 处理海报URL
+        let posterUrl = '';
+        let fallbackUrl = 'https://via.placeholder.com/150x220/3b82f6/ffffff?text=' + encodeURIComponent(movie.title || '暂无海报');
+        if (movie.local_poster && movie.local_poster !== '') {
+            posterUrl = movie.local_poster;
+        } else if (movie.poster && movie.poster !== '') {
+            posterUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(movie.poster);
+        } else {
+            posterUrl = fallbackUrl;
+        }
+
+        let tagsHtml = '';
+        if (movie.tags && movie.tags.length > 0) {
+            tagsHtml = '<div style="margin-top:12px;"><strong>标签:</strong> ';
+            for (let i = 0; i < movie.tags.length; i++) {
+                tagsHtml += '<span style="display:inline-block; background:#eef2ff; padding:2px 8px; border-radius:12px; margin:2px; font-size:11px; color:#3b82f6;">#' + movie.tags[i] + '</span>';
+            }
+            tagsHtml += '</div>';
+        }
+
+        let actorsStr = Array.isArray(movie.actors) ? movie.actors.join('、') : movie.actors;
+
+        let infoHtml = '<div class="movie-detail-card">';
+        infoHtml += '<div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">';
+        infoHtml += '<div style="flex-shrink:0;">';
+        infoHtml += '<img src="' + posterUrl + '" alt="' + movie.title + '" style="width:150px; height:220px; object-fit:cover; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15);" onerror="this.onerror=null; this.src=\'' + fallbackUrl + '\';">';
+        infoHtml += '</div>';
+        infoHtml += '<div style="flex:1; min-width:200px;">';
+        infoHtml += '<h3 style="font-size:1.4rem; margin:0 0 10px 0; color:#3b82f6;">🎬 ' + escapeHtml(movie.title) + '</h3>';
+        infoHtml += '<div style="display:flex; gap:15px; margin-bottom:10px; flex-wrap:wrap;">';
+        infoHtml += '<span style="color:#475569;">📅 ' + movie.year + '</span>';
+        infoHtml += '<span style="color:#475569;">🎭 ' + movie.genre + '</span>';
+        infoHtml += '<span style="color:#475569;">🌍 ' + (movie.country || '未知') + '</span>';
+        infoHtml += '</div>';
+        infoHtml += '<div style="display:flex; gap:20px; margin-bottom:12px; flex-wrap:wrap;">';
+        infoHtml += '<span style="background:#eef2ff; padding:4px 10px; border-radius:4px; color:#3b82f6; font-weight:bold;">' + movie.rating + '分</span>';
+        infoHtml += '<span style="color:#64748b;">' + (movie.votes || 0) + '人评价</span>';
+        infoHtml += '</div>';
+        infoHtml += '<div class="movie-detail-row"><span class="movie-detail-label">导演:</span><span class="movie-detail-value">' + escapeHtml(movie.director) + '</span></div>';
+        infoHtml += '<div class="movie-detail-row"><span class="movie-detail-label">主演:</span><span class="movie-detail-value">' + escapeHtml(actorsStr) + '</span></div>';
+        infoHtml += '<div class="movie-detail-row"><span class="movie-detail-label">上映日期:</span><span class="movie-detail-value">' + (movie.release_date || '未知') + '</span></div>';
+        infoHtml += '<div class="movie-detail-row"><span class="movie-detail-label">语言:</span><span class="movie-detail-value">' + (movie.language || '未知') + '</span></div>';
+        infoHtml += '<div class="movie-detail-row"><span class="movie-detail-label">片长:</span><span class="movie-detail-value">' + (movie.duration || '未知') + '</span></div>';
+        infoHtml += tagsHtml;
+        infoHtml += '</div></div>';
+        infoHtml += '<div style="margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0;">';
+        infoHtml += '<strong>📝 剧情简介</strong><br>';
+        infoHtml += '<p style="line-height:1.8; color:#1e293b; margin-top:8px;">' + highlightKeywords(movie.description) + '</p>';
+        infoHtml += '</div>';
+        infoHtml += '<div style="margin-top:10px; font-size:0.85rem; color:#94a3b8;">数据来源: ' + (movie.source || '豆瓣') + '</div>';
+        infoHtml += '</div>';
+        infoDiv.innerHTML = infoHtml;
+
+        // 评分分析
+        let bgColor = '#f8fafc';
+        let ratingComment = '📝 评分一般，建议参考评论后再决定。';
+        if (movie.rating >= 9) {
+            bgColor = '#fef3c7';
+            ratingComment = '🏆 神作级别，强烈推荐！不容错过的经典之作！';
+        } else if (movie.rating >= 8) {
+            bgColor = '#dbeafe';
+            ratingComment = '🎖️ 优秀作品，值得一看！质量上乘的佳作。';
+        } else if (movie.rating >= 7) {
+            bgColor = '#d1fae5';
+            ratingComment = '👍 不错，可以观看！有一定的亮点。';
+        }
+
+        let ratingHtml = '<div class="movie-detail-card">';
+        ratingHtml += '<div style="text-align:center; margin-bottom:20px;">';
+        ratingHtml += '<div style="font-size:3rem; color:#fbbf24; font-weight:bold;">' + movie.rating + '</div>';
+        ratingHtml += '<div class="stars" style="font-size:1.2rem; margin:5px 0;">' + stars + '</div>';
+        ratingHtml += '<div style="color:#64748b;">豆瓣评分</div>';
+        ratingHtml += '</div>';
+        ratingHtml += '<div style="padding:15px; background:' + bgColor + '; border-radius:8px;"><strong>评分分析:</strong><br>' + ratingComment + '</div>';
+        ratingHtml += '</div>';
+        ratingDiv.innerHTML = ratingHtml;
+
+        // 类型分析
+        let genresArr = movie.genres || (movie.genre ? movie.genre.split('/') : ['未知']);
+        let genreHtml = '<div class="movie-detail-card">';
+        genreHtml += '<strong>🎭 类型分析</strong><br><br>';
+        for (let i = 0; i < genresArr.length; i++) {
+            let g = genresArr[i].trim();
+            genreHtml += '<div style="margin-bottom:12px;">';
+            genreHtml += '<span style="display:inline-block; background:#e0e7ff; padding:4px 12px; border-radius:20px; font-size:12px; margin-right:10px; color:#3b82f6;">' + g + '</span>';
+            genreHtml += '<span style="color:#475569;">' + getGenreAnalysis(g) + '</span>';
+            genreHtml += '</div>';
+        }
+        genreHtml += '</div>';
+        genreDiv.innerHTML = genreHtml;
+
+        // 导演/演员影响力分析
+        let actorsArr = Array.isArray(movie.actors) ? movie.actors : [movie.actors];
+        let actorsCards = '';
+        for (let i = 0; i < Math.min(actorsArr.length, 4); i++) {
+            if (actorsArr[i] && actorsArr[i] !== '未知') {
+                actorsCards += '<div style="background:#f8fafc; padding:6px 12px; border-radius:6px; border:1px solid #e2e8f0; text-align:center;">';
+                actorsCards += '<div style="font-weight:600; font-size:13px;">' + escapeHtml(actorsArr[i]) + '</div>';
+                actorsCards += '<div style="font-size:10px; color:#64748b;">精彩演绎</div>';
+                actorsCards += '</div>';
+            }
+        }
+
+        let influenceHtml = '<div class="movie-detail-card">';
+        influenceHtml += '<div style="margin-bottom:15px;">';
+        influenceHtml += '<strong>🎥 导演: ' + escapeHtml(movie.director) + '</strong><br>';
+        influenceHtml += '<span style="color:#64748b; font-size:13px;">' + getDirectorAnalysis(movie.director) + '</span>';
+        influenceHtml += '</div>';
+        if (actorsCards) {
+            influenceHtml += '<div><strong>⭐ 主要演员</strong><br>';
+            influenceHtml += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">' + actorsCards + '</div>';
+            influenceHtml += '</div>';
+        } else {
+            influenceHtml += '<div><strong>⭐ 主演阵容</strong><br><span style="color:#64748b;">' + escapeHtml(actorsStr) + '</span></div>';
+        }
+        influenceHtml += '</div>';
+        influenceDiv.innerHTML = influenceHtml;
+
+        // 缓存数据
+        tabDataCache['movie-analysis'].movieInfoHtml = infoDiv.innerHTML;
+        tabDataCache['movie-analysis'].movieRatingHtml = ratingDiv.innerHTML;
+        tabDataCache['movie-analysis'].genreAnalysisHtml = genreDiv.innerHTML;
+        tabDataCache['movie-analysis'].influenceAnalysisHtml = influenceDiv.innerHTML;
+        tabDataCache['movie-analysis'].searchMovieName = movie.title;
+    }
+
+    function highlightKeywords(text) {
+        if (!text) return '';
+        const keywords = ['希望', '救赎', '自由', '梦想', '爱情', '友情', '亲情', '成长', '冒险', '科幻', '悬疑', '恐怖', '喜剧', '悲剧', '经典', '震撼', '感动', '热血', '治愈', '黑暗', '光明'];
+        let result = text;
+        keywords.forEach(keyword => {
+            const regex = new RegExp(`(${keyword})`, 'g');
+            result = result.replace(regex, '<span style="color:#3b82f6; font-weight:600;">$1</span>');
+        });
+        return result;
+    }
+
+    function getGenreAnalysis(genre) {
+        const genreMap = {
+            '剧情': '📖 剧情片以深刻的主题和人物刻画见长，这类电影通常探讨人性、社会问题或人生哲理，需要静心品味。',
+            '科幻': '🚀 科幻片展现未来科技与想象力的碰撞，探讨科技与人类的关系，带来视觉盛宴与思想启迪。',
+            '动画': '🎨 动画电影以其独特的艺术表现形式，传递温暖、梦想与成长的主题，老少皆宜。',
+            '喜剧': '😄 喜剧片带来欢乐与轻松，通过幽默的方式反映生活，让人开怀大笑。',
+            '爱情': '💕 爱情片讲述动人的情感故事，展现爱情的甜蜜、遗憾与成长。',
+            '动作': '💪 动作片以精彩的打斗场面和紧张刺激的剧情见长，带来视觉冲击。',
+            '悬疑': '🔍 悬疑片充满谜团和反转，考验观众的推理能力，引人入胜。',
+            '惊悚': '😱 惊悚片营造紧张恐怖的氛围，带来心跳加速的观影体验。',
+            '犯罪': '🔫 犯罪片聚焦法律与道德的边界，探讨人性的复杂面。',
+            '战争': '⚔️ 战争片展现战争的残酷与人性的光辉，发人深省。'
+        };
+        return genreMap[genre] || '🎬 这部电影类型独特，值得细细品味。';
+    }
+
+    function getDirectorAnalysis(director) {
+        const directorMap = {
+            '弗兰克·德拉邦特': '代表作《肖申克的救赎》，擅长改编斯蒂芬·金作品，以温暖人心的故事著称。',
+            '陈凯歌': '中国第五代导演代表，作品注重历史与人性的深度思考，曾获戛纳金棕榈奖。',
+            '罗伯特·泽米吉斯': '好莱坞技术派导演，擅长将技术与故事完美结合，《阿甘正传》是其巅峰之作。',
+            '克里斯托弗·诺兰': '英国导演，以复杂的叙事结构和视觉奇观闻名，被誉为"神级导演"。',
+            '宫崎骏': '日本动画大师，作品充满想象力和人文关怀，吉卜力工作室创始人。',
+            '姜文': '中国导演、演员，作品风格独特，充满黑色幽默和深刻寓意。',
+            '文牧野': '新锐导演，代表作《我不是药神》，擅长现实题材创作。',
+            '詹姆斯·卡梅隆': '好莱坞技术先驱，代表作《泰坦尼克号》《阿凡达》，以宏大场面和深刻情感著称。',
+            '彼得·法拉利': '擅长喜剧与温情题材，《绿皮书》展现其深厚的导演功力。',
+            '拉吉库马尔·希拉尼': '印度导演，作品幽默中蕴含深意，《三傻大闹宝莱坞》是其代表作。'
+        };
+        return directorMap[director] || `${director}导演的作品风格独特，值得关注。`;
+    }
+
+    function downloadCrawledData() {
+        if (!lastCrawledRawData || lastCrawledRawData.length === 0) {
+            showToast('没有可下载的数据，请先获取评论数据', 'error');
+            return;
+        }
+        const headers = ['用户', '评分', '内容', '时间', '情感', '置信度'];
+        const rows = lastCrawledRawData.map(r => [
+            `"${escapeCsvCell(r.user || '豆瓣用户')}"`,
+            r.rating || 3,
+            `"${escapeCsvCell(r.content || '')}"`,
+            `"${escapeCsvCell(r.time || '')}"`,
+            r.sentiment || 'neutral',
+            r.confidence ? (r.confidence * 100).toFixed(2) + '%' : '0%'
+        ]);
+        const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        const filename = `douban_${lastCrawledMovieName || 'movie'}_reviews_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(`✅ 下载成功: ${filename}`, 'success');
+    }
+
+    function escapeCsvCell(cell) {
+        if (cell === undefined || cell === null) return '';
+        let str = String(cell);
+        str = str.replace(/"/g, '""');
+        return str;
+    }
+
+    window.startCrawling = function() {
         const movieName = document.getElementById('crawl-movie').value.trim();
         let maxCount = parseInt(document.getElementById('crawl-count').value);
         const statusDiv = document.getElementById('crawl-status');
         const resultDiv = document.getElementById('crawl-result');
         const progressFill = document.getElementById('crawl-progress-fill');
+        const downloadBtn = document.getElementById('downloadCrawlDataBtn');
 
         if (!movieName) {
             statusDiv.className = 'status status-error';
             statusDiv.innerHTML = '❌ 请输入影视名称';
+            showToast('请输入影视名称', 'error');
             return;
         }
-
         if (isNaN(maxCount) || maxCount < 10) {
-            statusDiv.className = 'status status-warning';
-            statusDiv.innerHTML = '⚠️ 请输入有效的爬取数量（10-1000），使用默认值200';
             maxCount = 200;
             document.getElementById('crawl-count').value = 200;
         }
-
         maxCount = Math.min(maxCount, 1000);
-
         statusDiv.className = 'status status-info';
-        statusDiv.innerHTML = '<span class="loading"></span> 正在爬取，请稍候（可能需要30-90秒）...';
-        resultDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 爬取中...</div>';
+        statusDiv.innerHTML = '<span class="loading"></span> 正在获取，请稍候（可能需要10-30秒）...';
+        resultDiv.innerHTML = '<div style="text-align:center; padding:40px;"><span class="loading"></span> 获取中...</div>';
         progressFill.style.width = '30%';
+        if (downloadBtn) downloadBtn.disabled = true;
 
         fetch('/api/crawl_reviews', {
             method: 'POST',
@@ -808,367 +1442,102 @@
             .then(data => {
                 progressFill.style.width = '100%';
                 if (data.success) {
-                    let html = '<table class="review-table"><thead><tr>';
-                    html += '<th>用户</th><th>评分</th><th>评论内容</th><th>情感</th>';
-                    html += '</tr></thead><tbody>';
+                    lastCrawledRawData = data.reviews || [];
+                    lastCrawledMovieName = data.movie_name || movieName;
+                    if (downloadBtn) downloadBtn.disabled = false;
+
+                    let positiveCount = 0, neutralCount = 0, negativeCount = 0;
                     data.reviews.forEach(r => {
-                        let stars = '⭐'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
-                        let sentimentIcon = r.sentiment === 'positive' ? '😊' : (r.sentiment === 'negative' ? '😞' : '😐');
-                        let sentimentText = r.sentiment === 'positive' ? '正面' : (r.sentiment === 'negative' ? '负面' : '中性');
-                        let confidence = r.confidence ? (r.confidence * 100).toFixed(0) : 0;
-                        html += `<tr>
-                            <td style="padding:8px;">${escapeHtml(r.user || '豆瓣用户')}</td>
-                            <td style="padding:8px;" class="stars-rating">${stars}</td>
-                            <td style="padding:8px;">${escapeHtml((r.content || '').substring(0, 200))}${(r.content || '').length > 200 ? '...' : ''}</td>
-                            <td style="padding:8px;">${sentimentIcon} ${sentimentText} (${confidence}%)</td>
-                        </tr>`;
+                        if (r.sentiment === 'positive') positiveCount++;
+                        else if (r.sentiment === 'negative') negativeCount++;
+                        else neutralCount++;
                     });
-                    html += '</tbody></table>';
-                    resultDiv.innerHTML = html;
+                    const totalCount = data.reviews.length;
 
+                    let statsHtml = `<div class="crawl-stats"><div class="crawl-stat-card"><div class="stat-number">${totalCount}</div><div class="stat-label">总评论数</div></div><div class="crawl-stat-card positive"><div class="stat-number">${positiveCount}</div><div class="stat-label">😊 正面</div></div><div class="crawl-stat-card neutral"><div class="stat-number">${neutralCount}</div><div class="stat-label">😐 中性</div></div><div class="crawl-stat-card negative"><div class="stat-number">${negativeCount}</div><div class="stat-label">😞 负面</div></div></div>`;
+                    let cardsHtml = '';
+                    data.reviews.forEach(r => {
+                        let sentimentClass = r.sentiment === 'positive' ? 'crawl-sentiment-positive' : (r.sentiment === 'negative' ? 'crawl-sentiment-negative' : 'crawl-sentiment-neutral');
+                        let sentimentText = r.sentiment === 'positive' ? '正面' : (r.sentiment === 'negative' ? '负面' : '中性');
+                        let sentimentIcon = r.sentiment === 'positive' ? '😊' : (r.sentiment === 'negative' ? '😞' : '😐');
+                        let stars = '';
+                        let ratingNum = r.rating || 3;
+                        for (let i = 0; i < ratingNum; i++) stars += '⭐';
+                        for (let i = 0; i < 5 - ratingNum; i++) stars += '☆';
+                        let confidence = r.confidence ? (r.confidence * 100).toFixed(0) : 0;
+                        let userInitial = (r.user || '豆')[0];
+                        cardsHtml += `<div class="crawl-review-card"><div class="crawl-review-header"><div class="crawl-review-user"><span class="user-avatar">${escapeHtml(userInitial)}</span><span>${escapeHtml(r.user || '豆瓣用户')}</span></div><div class="crawl-review-rating">${stars}</div><span class="crawl-review-sentiment ${sentimentClass}">${sentimentIcon} ${sentimentText}<span class="crawl-confidence-badge">(置信度: ${confidence}%)</span></span></div><div class="crawl-review-content">${escapeHtml(r.content || '暂无评论内容')}</div><div class="crawl-review-time">📅 ${r.time || '日期未知'}</div></div>`;
+                    });
+                    resultDiv.innerHTML = statsHtml + cardsHtml;
+                    tabDataCache['data-collection'].crawlResult = resultDiv.innerHTML;
+                    tabDataCache['data-collection'].crawlMovieName = movieName;
+                    tabDataCache['data-collection'].crawlCount = maxCount.toString();
                     let actualCount = data.reviews.length;
+                    let statusHtml = `✅ 获取完成！实际获取 ${actualCount} 条评论，电影：《${data.movie_name}》（目标：${maxCount}条）<br>🤖 智能情感分析已完成`;
+                    if (actualCount < maxCount) statusHtml += `<br>⚠️ 提示：豆瓣最多只提供20页评论（约400条），实际爬取数量可能少于设定值。`;
+
+                    const movieDisplayName = data.movie_name || movieName;
+                    const sentimentStats = { positive: positiveCount, neutral: neutralCount, negative: negativeCount };
+
+                    const cachedAnalysisData = {
+                        success: true,
+                        name: movieDisplayName,
+                        total: data.reviews.length,
+                        positive: sentimentStats.positive,
+                        neutral: sentimentStats.neutral,
+                        negative: sentimentStats.negative,
+                        positive_pct: (sentimentStats.positive / data.reviews.length * 100) || 0,
+                        neutral_pct: (sentimentStats.neutral / data.reviews.length * 100) || 0,
+                        negative_pct: (sentimentStats.negative / data.reviews.length * 100) || 0,
+                        avg_rating: (data.reviews.reduce((sum, r) => sum + (r.rating || 3), 0) / data.reviews.length) || 0,
+                        reviews: data.reviews.map(r => ({
+                            user: r.user,
+                            rating: r.rating,
+                            content: r.content,
+                            time: r.time,
+                            sentiment: r.sentiment,
+                            sentiment_cn: r.sentiment === 'positive' ? '正面' : (r.sentiment === 'negative' ? '负面' : '中性'),
+                            confidence: r.confidence
+                        })),
+                        sentiment_chart: null
+                    };
+
+                    crawledDataCache[movieDisplayName] = cachedAnalysisData;
+                    console.log(`✅ 爬取数据已缓存: ${movieDisplayName}`);
+
+                    statusHtml += `<br>💡 提示：现在可以切换到"数据分析"标签页，选择"${movieDisplayName}"查看分析结果（使用缓存，无需重复分析）`;
+                    statusDiv.innerHTML = statusHtml;
                     statusDiv.className = 'status status-success';
-                    statusDiv.innerHTML = `✅ 爬取完成！实际获取 ${actualCount} 条评论，电影：《${data.movie_name}》（目标：${maxCount}条）<br>🤖 朴素贝叶斯情感分析已完成`;
-
-                    if (actualCount < maxCount) {
-                        statusDiv.innerHTML += `<br>⚠️ 提示：豆瓣最多只提供20页评论（约400条），实际爬取数量可能少于设定值。`;
-                    }
-
+                    showToast(`✅ 爬取完成！共 ${actualCount} 条评论，数据已缓存`, 'success');
                     loadDataSources();
-                    setTimeout(() => {
-                        document.getElementById('source-type').value = 'crawled';
-                        loadDataSources();
-                    }, 500);
                 } else {
-                    resultDiv.innerHTML = `<div style="color:red; padding:20px; text-align:center;">❌ ${escapeHtml(data.error)}</div>`;
+                    resultDiv.innerHTML = `<div style="color:#ef4444; padding:40px; text-align:center;">❌ ${escapeHtml(data.error)}</div>`;
                     statusDiv.className = 'status status-error';
                     statusDiv.innerHTML = '❌ 爬取失败：' + data.error;
                     progressFill.style.width = '0%';
+                    if (downloadBtn) downloadBtn.disabled = true;
+                    showToast('爬取失败：' + data.error, 'error');
                 }
             })
             .catch(err => {
-                resultDiv.innerHTML = `<div style="color:red; padding:20px; text-align:center;">❌ 网络错误：${escapeHtml(err.message)}</div>`;
+                resultDiv.innerHTML = `<div style="color:#ef4444; padding:40px; text-align:center;">❌ 网络错误：${escapeHtml(err.message)}</div>`;
                 statusDiv.className = 'status status-error';
                 statusDiv.innerHTML = '❌ 网络请求失败';
                 progressFill.style.width = '0%';
+                if (downloadBtn) downloadBtn.disabled = true;
+                showToast('网络请求失败', 'error');
             });
-    }
+    };
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            if (tabId) switchTab(tabId);
         });
-    }
-
-    function searchMovie() {
-        const movieName = document.getElementById('search-movie').value.trim();
-        if (!movieName) { alert('请输入电影名称'); return; }
-        const infoDiv = document.getElementById('movie-info');
-        infoDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span class="loading"></span> 搜索中...</div>';
-        fetch('/api/search_movie', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({movie_name: movieName})
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    displayMovieInfo(data.data);
-                    document.getElementById('suggestions-area').innerHTML = '';
-                } else {
-                    infoDiv.innerHTML = `<div style="color:red; padding:20px;">❌ ${data.message}</div>`;
-                    if (data.suggestions && data.suggestions.length > 0) {
-                        let suggestionsHtml = '<div class="suggestions"><strong>💡 您是不是想找:</strong><br>';
-                        data.suggestions.forEach(s => {
-                            suggestionsHtml += `<button class="suggestion-btn" onclick="document.getElementById('search-movie').value='${s}';searchMovie()">${s}</button>`;
-                        });
-                        suggestionsHtml += '</div>';
-                        document.getElementById('suggestions-area').innerHTML = suggestionsHtml;
-                    }
-                }
-            })
-            .catch(err => { infoDiv.innerHTML = `<div style="color:red;">❌ 请求失败：${err.message}</div>`; });
-    }
-
-    function analyzeBuiltin() {
-        const title = document.getElementById('builtin-movie').value;
-        document.getElementById('search-movie').value = title;
-        searchMovie();
-    }
-
-    function displayMovieInfo(movie) {
-
-        console.log("本地海报路径:", movie.local_poster);
-        const infoDiv = document.getElementById('movie-info');
-        const ratingDiv = document.getElementById('movie-rating-info');
-        const genreDiv = document.getElementById('genre-analysis');
-        const influenceDiv = document.getElementById('influence-analysis');
-
-        let stars = '';
-        let ratingNum = parseFloat(movie.rating);
-        for (let i = 0; i < Math.floor(ratingNum); i++) stars += '⭐';
-        for (let i = 0; i < 5 - Math.floor(ratingNum); i++) stars += '☆';
-
-        let tagsHtml = '';
-        if (movie.tags && movie.tags.length > 0) {
-            for (let i = 0; i < movie.tags.length; i++) {
-                tagsHtml += '<span class="tag">#' + movie.tags[i] + '</span>';
-            }
-        }
-
-        let infoHtml = '<div class="movie-detail-card">';
-        infoHtml += '<div style="display:flex; gap:20px; align-items:flex-start;">';
-        // 左侧海报区域
-        infoHtml += '<div style="flex-shrink:0;">';
-
-        // 海报生成逻辑（优先本地，其次代理，最后占位）
-        let posterUrl = '';
-        let fallbackUrl = 'https://via.placeholder.com/150x220/667eea/ffffff?text=' + encodeURIComponent(movie.title || '暂无海报');
-        if (movie.local_poster && movie.local_poster !== '') {
-            posterUrl = movie.local_poster;
-        } else if (movie.poster && movie.poster !== '') {
-            posterUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(movie.poster);
-        } else {
-            posterUrl = fallbackUrl;
-        }
-
-        infoHtml += '<img src="' + posterUrl + '" alt="' + movie.title + '" style="width:150px; height:220px; object-fit:cover; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15);" onerror="this.onerror=null; this.src=\'' + fallbackUrl + '\';">';
-        infoHtml += '</div>';  // 关闭海报容器
-
-        // 右侧电影信息
-        infoHtml += '<div style="flex:1; min-width:0;">';
-        infoHtml += '<h3 style="font-size:1.4rem; margin:0 0 10px 0; color:#667eea;">🎬 ' + movie.title + '</h3>';
-        infoHtml += '<div style="display:flex; gap:15px; margin-bottom:10px; flex-wrap:wrap;">';
-        infoHtml += '<span style="color:#666;">📅 ' + movie.year + '</span>';
-        infoHtml += '<span style="color:#666;">🎭 ' + movie.genre + '</span>';
-        infoHtml += '<span style="color:#666;">🌍 ' + (movie.country || '未知') + '</span>';
-        infoHtml += '</div>';
-        infoHtml += '<div style="display:flex; gap:20px; margin-bottom:12px; flex-wrap:wrap;">';
-        infoHtml += '<span style="background:#eef2ff; padding:4px 10px; border-radius:4px; color:#667eea;">' + movie.rating + '分</span>';
-        infoHtml += '<span style="color:#888;">' + (movie.votes || 0) + '人评价</span>';
-        infoHtml += '<span style="color:#888;">想看: ' + (movie.wish_count || 0) + '</span>';
-        infoHtml += '<span style="color:#888;">看过: ' + (movie.collect_count || 0) + '</span>';
-        infoHtml += '</div>';
-        infoHtml += '<div style="margin-bottom:10px;"><span style="font-weight:600;">导演:</span> ' + movie.director + '</div>';
-        let actorsStr = Array.isArray(movie.actors) ? movie.actors.join('、') : movie.actors;
-        infoHtml += '<div style="margin-bottom:10px;"><span style="font-weight:600;">主演:</span> ' + actorsStr + '</div>';
-        infoHtml += '<div style="margin-bottom:10px;"><span style="font-weight:600;">上映日期:</span> ' + (movie.release_date || '未知') + '</div>';
-        infoHtml += '<div style="margin-bottom:10px;"><span style="font-weight:600;">语言:</span> ' + (movie.language || '未知') + '</div>';
-        infoHtml += '<div style="margin-bottom:10px;"><span style="font-weight:600;">片长:</span> ' + (movie.duration || '未知') + '</div>';
-        if (tagsHtml) {
-            infoHtml += '<div style="margin-top:12px;">' + tagsHtml + '</div>';
-        }
-        infoHtml += '</div>';  // 关闭右侧信息容器
-        infoHtml += '</div>';  // 关闭第一层 flex 容器
-
-        // 剧情简介区域
-        infoHtml += '<div style="margin-top:20px; padding-top:15px; border-top:1px solid #e2e8f0;">';
-        infoHtml += '<strong style="display:block; margin-bottom:8px;">📝 剧情简介</strong>';
-        infoHtml += '<div id="description-container"><p id="description-text" style="line-height:1.8; color:#444; margin:0;">' + highlightKeywords(movie.description) + '</p></div>';
-        infoHtml += '<button id="toggle-desc" onclick="toggleDescription()" style="margin-top:8px; background:none; border:none; color:#667eea; cursor:pointer; padding:0;">展开全部 ▼</button>';
-        infoHtml += '</div>';
-        infoHtml += '<div style="margin-top:10px; font-size:0.85rem; color:#999;">数据来源: ' + movie.source + '</div>';
-        infoHtml += '</div>';  // 关闭 movie-detail-card
-
-        infoDiv.innerHTML = infoHtml;
-
-        // 以下评分分析、类型分析、主创信息部分保持不变（与之前相同）
-        const starDistributions = generateStarDistribution(ratingNum);
-        const genreComparison = getGenreComparison(movie.genres || [movie.genre], ratingNum);
-
-        let bgColor = '#f3f4f6';
-        let ratingComment = '📝 评分一般，建议参考评论后再决定。';
-        if (movie.rating >= 9) {
-            bgColor = '#fef3c7';
-            ratingComment = '🏆 神作级别，强烈推荐！不容错过的经典之作！';
-        } else if (movie.rating >= 8) {
-            bgColor = '#dbeafe';
-            ratingComment = '🎖️ 优秀作品，值得一看！质量上乘的佳作。';
-        } else if (movie.rating >= 7) {
-            bgColor = '#f0fdf4';
-            ratingComment = '👍 不错，可以观看！有一定的亮点。';
-        }
-
-        let ratingHtml = '<div style="padding:15px;">';
-        ratingHtml += '<div style="text-align:center; margin-bottom:20px;">';
-        ratingHtml += '<div style="font-size:3.5rem; color:#fbbf24; font-weight:bold;">' + movie.rating + '</div>';
-        ratingHtml += '<div class="stars" style="font-size:1.3rem; margin:5px 0;">' + stars + '</div>';
-        ratingHtml += '<div style="color:#888;">豆瓣评分</div>';
-        ratingHtml += '</div>';
-        ratingHtml += '<div style="margin-bottom:20px;"><strong style="display:block; margin-bottom:10px;">⭐ 星级分布</strong>' + starDistributions + '</div>';
-        ratingHtml += '<div style="margin-bottom:20px;"><strong style="display:block; margin-bottom:10px;">📊 同类型对比</strong>' + genreComparison + '</div>';
-        ratingHtml += '<div style="padding:15px; background:' + bgColor + '; border-radius:8px;"><strong>评分分析:</strong><br>' + ratingComment + '</div>';
-        ratingHtml += '</div>';
-        ratingDiv.innerHTML = ratingHtml;
-
-        let genreTags = '';
-        let genresArr = movie.genres || [movie.genre];
-        for (let i = 0; i < genresArr.length; i++) {
-            genreTags += '<span class="tag" style="background:#e0e7ff;">' + genresArr[i] + '</span> ';
-        }
-        let genreHtml = '<div style="padding:15px;">';
-        genreHtml += '<h4 style="margin:0 0 15px 0; color:#333;">🎭 类型分析</h4>';
-        genreHtml += '<div style="margin-bottom:15px;"><strong>类型标签:</strong> ' + genreTags + '</div>';
-        genreHtml += '<div style="line-height:1.8; color:#555;">' + getGenreAnalysis(movie.genre) + '</div>';
-        genreHtml += '</div>';
-        genreDiv.innerHTML = genreHtml;
-
-        let actorsCards = '';
-        let actorsArr = Array.isArray(movie.actors) ? movie.actors : [movie.actors];
-        for (let i = 0; i < actorsArr.length; i++) {
-            actorsCards += '<div style="background:#f8fafc; padding:8px 15px; border-radius:6px; border:1px solid #e2e8f0; text-align:center;">';
-            actorsCards += '<div style="font-weight:600;">' + actorsArr[i] + '</div>';
-            actorsCards += '<div style="font-size:0.8rem; color:#888;">精彩演绎</div>';
-            actorsCards += '</div>';
-        }
-        let influenceHtml = '<div style="padding:15px;">';
-        influenceHtml += '<h4 style="margin:0 0 15px 0; color:#333;">🎬 主创信息</h4>';
-        influenceHtml += '<div style="margin-bottom:20px;"><div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">';
-        influenceHtml += '<div style="font-weight:600; color:#667eea;">🎥 导演: ' + movie.director + '</div>';
-        influenceHtml += '<div style="margin-top:6px; color:#666; font-size:0.9rem;">' + getDirectorAnalysis(movie.director) + '</div>';
-        influenceHtml += '</div></div>';
-        influenceHtml += '<div><strong style="display:block; margin-bottom:10px;">⭐ 主要演员</strong>';
-        influenceHtml += '<div style="display:flex; gap:10px; flex-wrap:wrap;">' + actorsCards + '</div>';
-        influenceHtml += '</div></div>';
-        influenceDiv.innerHTML = influenceHtml;
-    }
-
-    function highlightKeywords(text) {
-        const keywords = ['希望', '救赎', '自由', '梦想', '爱情', '友情', '亲情', '成长', '冒险', '科幻', '悬疑', '恐怖', '喜剧', '悲剧', '经典', '震撼', '感动', '热血', '治愈', '黑暗', '光明', '末日', '未来', '过去', '现在', '真相', '谎言', '背叛', '忠诚', '勇敢', '恐惧', '战争', '和平', '正义', '邪恶', '命运', '选择', '改变', '坚持'];
-        let result = text;
-        keywords.forEach(keyword => {
-            const regex = new RegExp(`(${keyword})`, 'g');
-            result = result.replace(regex, '<span style="color:#667eea; font-weight:600;">$1</span>');
-        });
-        return result;
-    }
-
-    let isDescriptionExpanded = false;
-    function toggleDescription() {
-        const descText = document.getElementById('description-text');
-        const toggleBtn = document.getElementById('toggle-desc');
-        isDescriptionExpanded = !isDescriptionExpanded;
-        if (isDescriptionExpanded) {
-            descText.style.webkitLineClamp = 'unset';
-            descText.style.display = 'block';
-            toggleBtn.textContent = '收起内容 ▲';
-        } else {
-            descText.style.webkitLineClamp = '3';
-            descText.style.display = '-webkit-box';
-            toggleBtn.textContent = '展开全部 ▼';
-        }
-    }
-
-    function generateStarDistribution(rating) {
-        let ratingNum = parseFloat(rating);
-        if (isNaN(ratingNum)) ratingNum = 7.0;
-
-        const dist = [
-            { stars: 5, percent: Math.round(ratingNum * 6) },
-            { stars: 4, percent: Math.round((10 - ratingNum) * 4) },
-            { stars: 3, percent: Math.round((10 - ratingNum) * 2) },
-            { stars: 2, percent: Math.round((10 - ratingNum) * 1) },
-            { stars: 1, percent: Math.round((10 - ratingNum) * 0.5) }
-        ];
-        let total = dist.reduce(function(sum, d) { return sum + d.percent; }, 0);
-        if (total > 0) {
-            dist.forEach(function(d) { d.percent = Math.round(d.percent / total * 100); });
-        } else {
-            dist[0].percent = 20;
-            dist[1].percent = 20;
-            dist[2].percent = 20;
-            dist[3].percent = 20;
-            dist[4].percent = 20;
-        }
-
-        let html = '';
-        for (let i = 0; i < dist.length; i++) {
-            let d = dist[i];
-            html += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">';
-            html += '<div style="width:40px; text-align:right;">' + d.stars + '星</div>';
-            html += '<div style="flex:1; height:12px; background:#e2e8f0; border-radius:6px; overflow:hidden;">';
-            html += '<div style="width:' + d.percent + '%; height:100%; background:linear-gradient(90deg, #fbbf24, #f59e0b); border-radius:6px;"></div>';
-            html += '</div>';
-            html += '<div style="width:40px; text-align:left; color:#666;">' + d.percent + '%</div>';
-            html += '</div>';
-        }
-        return html;
-    }
-
-    function getGenreComparison(genres, rating) {
-        let ratingNum = parseFloat(rating);
-        if (isNaN(ratingNum)) ratingNum = 7.0;
-
-        let genresArray = genres;
-        if (!Array.isArray(genresArray)) {
-            if (typeof genresArray === 'string') {
-                genresArray = genresArray.split(/[\/|,，]/).map(function(g) { return g.trim(); });
-            } else {
-                genresArray = ['剧情'];
-            }
-        }
-
-        let baseRating = 7.0;
-        for (let i = 0; i < genresArray.length; i++) {
-            let g = genresArray[i] || '';
-            if (g.indexOf('科幻') !== -1) {
-                baseRating = 7.2;
-                break;
-            } else if (g.indexOf('动画') !== -1) {
-                baseRating = 7.8;
-                break;
-            } else if (g.indexOf('剧情') !== -1) {
-                baseRating = 7.5;
-                break;
-            }
-        }
-
-        let comparePercent = Math.min(Math.max((ratingNum - baseRating + 2) / 4 * 100, 10), 95);
-        comparePercent = Math.round(comparePercent);
-
-        let html = '<div style="margin-bottom:8px;">本片评分 <strong style="color:#667eea;">' + ratingNum + '分</strong></div>';
-        html += '<div style="display:flex; align-items:center; gap:10px;">';
-        html += '<div style="width:60px; font-size:0.85rem; color:#666;">同类型平均</div>';
-        html += '<div style="flex:1; height:16px; background:#e2e8f0; border-radius:8px; overflow:hidden;">';
-        html += '<div style="width:' + comparePercent + '%; height:100%; background:linear-gradient(90deg, #667eea, #764ba2); border-radius:8px;"></div>';
-        html += '</div>';
-        html += '<div style="width:80px; text-align:right; color:#667eea; font-weight:600;">高于 ' + comparePercent + '%</div>';
-        html += '</div>';
-        return html;
-    }
-
-    function getGenreAnalysis(genre) {
-        if (genre.includes('剧情')) return '📖 剧情片以深刻的主题和人物刻画见长，这类电影通常探讨人性、社会问题或人生哲理，需要静心品味。';
-        if (genre.includes('科幻')) return '🚀 科幻片展现未来科技与想象力的碰撞，探讨科技与人类的关系，带来视觉盛宴与思想启迪。';
-        if (genre.includes('动画')) return '🎨 动画电影以其独特的艺术表现形式，传递温暖、梦想与成长的主题，老少皆宜。';
-        if (genre.includes('喜剧')) return '😄 喜剧片带来欢乐与轻松，通过幽默的方式反映生活，让人开怀大笑。';
-        if (genre.includes('爱情')) return '💕 爱情片讲述动人的情感故事，展现爱情的甜蜜、遗憾与成长。';
-        return '🎬 这部电影类型独特，值得细细品味。';
-    }
-
-    function getDirectorAnalysis(director) {
-        const famousDirectors = {
-            '弗兰克·德拉邦特': '代表作《肖申克的救赎》，擅长改编斯蒂芬·金作品，以温暖人心的故事著称。',
-            '陈凯歌': '中国第五代导演代表，作品注重历史与人性的深度思考，曾获戛纳金棕榈奖。',
-            '罗伯特·泽米吉斯': '好莱坞技术派导演，擅长将技术与故事完美结合，《阿甘正传》是其巅峰之作。',
-            '克里斯托弗·诺兰': '英国导演，以复杂的叙事结构和视觉奇观闻名，被誉为"神级导演"。',
-            '宫崎骏': '日本动画大师，作品充满想象力和人文关怀，吉卜力工作室创始人。',
-            '姜文': '中国导演、演员，作品风格独特，充满黑色幽默和深刻寓意。',
-            '文牧野': '新锐导演，代表作《我不是药神》，擅长现实题材创作。'
-        };
-        return famousDirectors[director] || `${director}导演的作品风格独特，值得关注。`;
-    }
-
-    function getActorAnalysis(movie) {
-        return `主演${Array.isArray(movie.actors) ? movie.actors[0] : movie.actors}的精彩演绎为电影增色不少，表演获得观众一致好评。`;
-    }
+    });
 
     loadDataSources();
 </script>
-
 {% include 'ai_chat_widget.html' %}
 </body>
 </html>
